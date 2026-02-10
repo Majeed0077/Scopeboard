@@ -2,9 +2,13 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { TopBar } from "@/components/layout/TopBar";
 import { AppProviders } from "@/components/layout/AppProviders";
 import { getCurrentRole, getCurrentUser } from "@/lib/auth";
+import type { Role } from "@/lib/rbac";
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
-  const initialRole = await getCurrentRole();
+  const role = await getCurrentRole();
+  const initialRole: Role | null =
+    role === "owner" || role === "editor" ? role : null;
+
   const currentUser = await getCurrentUser();
   const initialUser = currentUser
     ? {
@@ -13,6 +17,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
         avatarUrl: currentUser.avatarUrl ?? "",
       }
     : null;
+
   return (
     <AppProviders>
       <div className="flex h-screen w-full overflow-hidden">
