@@ -10,13 +10,19 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
     role === "owner" || role === "editor" ? role : null;
 
   const currentUser = await getCurrentUser();
-  const initialUser = currentUser
-    ? {
-        role: currentUser.role,
-        name: currentUser.name,
-        avatarUrl: currentUser.avatarUrl ?? "",
-      }
-    : null;
+  const safeUserRole: Role | null =
+    currentUser?.role === "owner" || currentUser?.role === "editor"
+      ? currentUser.role
+      : null;
+
+  const initialUser =
+    currentUser && safeUserRole
+      ? {
+          role: safeUserRole,
+          name: currentUser.name,
+          avatarUrl: currentUser.avatarUrl ?? "",
+        }
+      : null;
 
   return (
     <AppProviders>
