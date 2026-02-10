@@ -12,7 +12,6 @@ import { formatMoney, formatDate } from "@/lib/format";
 import { hasPermission } from "@/lib/rbac";
 import { useRole } from "@/lib/useRole";
 import { DisableIfNoPermission, Can } from "@/components/common/PermissionGate";
-import { MaskIfNoPermission } from "@/components/common/MaskIfNoPermission";
 import { Badge } from "@/components/ui/badge";
 import { ActivityTimeline } from "@/components/common/ActivityTimeline";
 import { useActivity } from "@/lib/activityStore";
