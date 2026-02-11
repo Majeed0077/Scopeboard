@@ -35,7 +35,6 @@ export function AdminSettingsForm({ initial }: { initial: AdminSettings }) {
       setSaving(false);
     }
   }
-
   return (
     <Card className="space-y-4 p-5">
       <div>
@@ -82,7 +81,6 @@ export function AdminSettingsForm({ initial }: { initial: AdminSettings }) {
           placeholder="https://..."
         />
       </div>
-
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving}>
           {saving ? "Saving..." : "Save settings"}

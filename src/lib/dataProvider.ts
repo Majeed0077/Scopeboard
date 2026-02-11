@@ -16,6 +16,7 @@ export interface DataProvider {
   getInvoice(id: string): Promise<Invoice | undefined>;
 }
 
+// Retained for explicit mock endpoints only. App pages should use `dataProvider`.
 class LocalDataProvider implements DataProvider {
   async getContacts() {
     return contacts;
@@ -90,11 +91,3 @@ class ApiDataProvider implements DataProvider {
 
 export const localDataProvider: DataProvider = new LocalDataProvider();
 export const dataProvider: DataProvider = new ApiDataProvider();
-
-export const MONGODB_TODO = [
-  "Add Mongoose connection in src/lib/db.ts and export a cached connection helper.",
-  "Define schemas/models in src/lib/models/* for Contact, Project, Milestone, Invoice.",
-  "Replace app/api/mock/*/route.ts with real CRUD in app/api/*/route.ts using the models.",
-  "Update ApiDataProvider to call /api/* routes instead of /api/mock/*.",
-  "Wire UI mutations to POST/PATCH/DELETE endpoints as follow-up work.",
-] as const;
