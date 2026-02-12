@@ -18,7 +18,7 @@ export default async function AuditPage() {
       <div>
         <h1 className="text-2xl font-semibold">Audit Log</h1>
         <p className="text-sm text-muted-foreground">
-          Owner-only history of sensitive actions across Flowlane.
+          Owner-only history of sensitive actions across ScopeBoard.
         </p>
       </div>
       <AuditLogTable items={items} />

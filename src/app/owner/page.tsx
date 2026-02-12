@@ -15,7 +15,7 @@ export default async function OwnerPage() {
         <div>
           <h1 className="text-2xl font-semibold">Owner Dashboard</h1>
           <p className="text-sm text-muted-foreground">
-            Manage everything across Flowlane.
+            Manage everything across ScopeBoard.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -29,11 +29,7 @@ export default async function OwnerPage() {
       <div className="grid gap-3 md:grid-cols-2">
         <Link className="rounded-xl border bg-card p-4 hover:bg-muted/30" href="/today">
           Today
-        </Link>
-        <Link className="rounded-xl border bg-card p-4 hover:bg-muted/30" href="/crm">
-          Pipeline
-        </Link>
-        <Link className="rounded-xl border bg-card p-4 hover:bg-muted/30" href="/contacts">
+        </Link>        <Link className="rounded-xl border bg-card p-4 hover:bg-muted/30" href="/contacts">
           Contacts
         </Link>
         <Link className="rounded-xl border bg-card p-4 hover:bg-muted/30" href="/projects">

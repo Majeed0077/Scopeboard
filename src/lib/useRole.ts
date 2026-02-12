@@ -21,17 +21,21 @@ function readRoleFromDom(): Role | null {
 }
 
 export function useRole() {
-  const [role, setRole] = useState<Role>(() => {
+  // Keep initial render deterministic between server and client.
+  const [role, setRole] = useState<Role>(() => cachedRole ?? "editor");
+
+  useEffect(() => {
     const domRole = readRoleFromDom();
     if (domRole) {
       cachedRole = domRole;
-      return domRole;
+      setRole(domRole);
+      return;
     }
-    return cachedRole ?? "editor";
-  });
 
-  useEffect(() => {
-    if (cachedRole) return;
+    if (cachedRole) {
+      setRole(cachedRole);
+      return;
+    }
 
     let mounted = true;
     fetch("/api/auth/me", { cache: "no-store" })

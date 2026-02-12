@@ -6,8 +6,8 @@ import { WorkspaceMembershipModel } from "@/lib/models/workspaceMembership";
 import type { Role } from "@/lib/rbac";
 import { dbConnect } from "@/lib/db";
 
-const COOKIE_NAME = "vaultflow_session";
-const ACTIVE_WORKSPACE_COOKIE = "vaultflow_workspace";
+const COOKIE_NAME = "scopeboard_session";
+const ACTIVE_WORKSPACE_COOKIE = "scopeboard_workspace";
 
 type SessionPayload = {
   userId: string;

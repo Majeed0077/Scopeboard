@@ -94,9 +94,7 @@ export function TopBar({
   useEffect(() => {
     const routes = [
       "/today",
-      "/dashboard",
-      "/crm",
-      "/contacts",
+      "/dashboard",      "/contacts",
       "/projects",
       "/profile",
       "/settings/account",
@@ -146,12 +144,12 @@ export function TopBar({
       loadHeaderData().catch(() => undefined);
     }
 
-    window.addEventListener("vaultflow-profile-updated", handleHeaderRefresh);
-    window.addEventListener("vaultflow-workspace-updated", handleHeaderRefresh as EventListener);
+    window.addEventListener("scopeboard-profile-updated", handleHeaderRefresh);
+    window.addEventListener("scopeboard-workspace-updated", handleHeaderRefresh as EventListener);
     return () => {
       mounted = false;
-      window.removeEventListener("vaultflow-profile-updated", handleHeaderRefresh);
-      window.removeEventListener("vaultflow-workspace-updated", handleHeaderRefresh as EventListener);
+      window.removeEventListener("scopeboard-profile-updated", handleHeaderRefresh);
+      window.removeEventListener("scopeboard-workspace-updated", handleHeaderRefresh as EventListener);
     };
   }, []);
 
@@ -239,7 +237,7 @@ export function TopBar({
         setCreateTeamName("");
         if (createdName) {
           window.dispatchEvent(
-            new CustomEvent("vaultflow-workspace-updated", {
+            new CustomEvent("scopeboard-workspace-updated", {
               detail: { workspaceId: createdId, name: createdName },
             }),
           );

@@ -44,7 +44,7 @@ export function InvoiceDetail({
   const contactName = contact?.company || contact?.name || "Client";
   const contactEmail = contact?.email || "";
   const whatsappNumber = (contact?.whatsapp || contact?.phone || "").replace(/\D/g, "");
-  const [orgName, setOrgName] = useState("Flowlane");
+  const [orgName, setOrgName] = useState("ScopeBoard");
   const [logoUrl, setLogoUrl] = useState("");
   const [customMessage, setCustomMessage] = useState("");
   const [templateLoaded, setTemplateLoaded] = useState(false);
@@ -72,7 +72,7 @@ export function InvoiceDetail({
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!data?.success || !data?.data) return;
-        setOrgName(data.data.orgName || "Flowlane");
+        setOrgName(data.data.orgName || "ScopeBoard");
         setLogoUrl(data.data.logoUrl || "");
       })
       .catch(() => undefined);

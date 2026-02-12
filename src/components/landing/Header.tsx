@@ -10,7 +10,7 @@ export function LandingHeader() {
         <div className="flex items-center">
           <Image
             src="/Logo.png"
-            alt="Flowlane"
+            alt="ScopeBoard"
             width={140}
             height={36}
             className="h-9 w-auto object-contain"

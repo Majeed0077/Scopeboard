@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { GripVertical, MoreHorizontal } from "lucide-react";
 import type { Project, ProjectStatus } from "@/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProjectStatusBadge } from "@/components/common/StatusBadge";
@@ -17,6 +19,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const statusOptions: { value: ProjectStatus | "all"; label: string }[] = [
   { value: "all", label: "All statuses" },
@@ -48,6 +56,7 @@ export function ProjectsList({
   const role = useRole();
   const { setProjects } = useLocalData();
   const canMove = hasPermission(role, "projects:edit");
+  const canDelete = hasPermission(role, "projects:delete");
 
   const filtered = useMemo(() => {
     const byStatus = status === "all" ? projects : projects.filter((project) => project.status === status);
@@ -72,6 +81,8 @@ export function ProjectsList({
     }
     const newStatus = over.id as ProjectStatus;
     const projectId = active.id as string;
+    const current = projects.find((project) => project.id === projectId);
+    if (!current || current.status === newStatus) return;
     try {
       await api.updateProject(projectId, { status: newStatus });
       setProjects((prev) =>
@@ -84,7 +95,6 @@ export function ProjectsList({
       toast.error("Unable to update project.");
     }
   }
-
 
   return (
     <div className="space-y-4">
@@ -180,8 +190,20 @@ export function ProjectsList({
                       key={project.id}
                       project={project}
                       canMove={canMove}
+                      canDelete={canDelete}
                       isOwner={isOwner}
                       budgetTier={budgetTierById?.[project.id]}
+
+
+                      onDelete={async () => {
+                        try {
+                          await api.deleteProject(project.id);
+                          setProjects((prev) => prev.filter((item) => item.id !== project.id));
+                          toast.success("Project deleted.");
+                        } catch {
+                          toast.error("Unable to delete project.");
+                        }
+                      }}
                     />
                   ))
                 ) : (
@@ -233,17 +255,28 @@ function ProjectColumn({
 function ProjectCard({
   project,
   canMove,
+  canDelete,
   isOwner,
   budgetTier,
+  onDelete,
 }: {
   project: Project;
   canMove: boolean;
+  canDelete: boolean;
   isOwner: boolean;
   budgetTier?: "Low" | "Medium" | "High";
+  onDelete: () => void;
 }) {
+  const router = useRouter();
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: project.id,
   });
+
+  function handleCardClick(event: React.MouseEvent<HTMLDivElement>) {
+    const target = event.target as HTMLElement;
+    if (target.closest("[data-project-menu]")) return;
+    router.push(`/projects/${project.id}`);
+  }
 
   return (
     <Card
@@ -251,11 +284,10 @@ function ProjectCard({
       style={{ transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined }}
       className={cn(
         "rounded-lg border bg-background p-4 shadow-sm transition",
-        canMove ? "cursor-grab" : "cursor-not-allowed opacity-90",
+        "cursor-pointer",
         isDragging && "opacity-60",
       )}
-      {...(canMove ? listeners : {})}
-      {...(canMove ? attributes : {})}
+      onClick={handleCardClick}
     >
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-2">
@@ -265,7 +297,49 @@ function ProjectCard({
               Due {formatDate(project.dueDate)}
             </p>
           </div>
-          <ProjectStatusBadge status={project.status} />
+          <div className="flex items-center gap-1" data-project-menu onPointerDown={(event) => event.stopPropagation()}>
+            <ProjectStatusBadge status={project.status} />
+            {canMove ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 cursor-grab"
+                data-project-menu
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={(event) => event.stopPropagation()}
+                {...listeners}
+                {...attributes}
+              >
+                <GripVertical className="h-4 w-4" />
+              </Button>
+            ) : null}
+            {canDelete ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onDelete();
+                    }}
+                  >
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
+          </div>
         </div>
         <div className="text-xs text-muted-foreground">
           Budget{" "}
@@ -273,10 +347,12 @@ function ProjectCard({
             ? formatMoney(project.budgetAmount ?? 0, project.currency ?? "USD")
             : budgetTier ?? "Hidden"}
         </div>
-        <Button asChild variant="ghost" size="sm" className="w-fit px-0 text-xs">
-          <Link href={`/projects/${project.id}`}>Open</Link>
-        </Button>
       </div>
     </Card>
   );
 }
+
+
+
+
+

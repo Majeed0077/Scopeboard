@@ -365,7 +365,7 @@ export function AccountSettingsClient() {
           <div className="space-y-2">
             <Label>Signature block</Label>
             <p className="text-xs text-muted-foreground">Used in invoice and message templates.</p>
-            <Textarea rows={4} value={signature} onChange={(e) => setSignature(e.target.value)} placeholder="Regards,\nYour Name\nFlowlane" />
+            <Textarea rows={4} value={signature} onChange={(e) => setSignature(e.target.value)} placeholder="Regards,\nYour Name\nScopeBoard" />
           </div>
           <div className="flex justify-end">
             <Button onClick={savePreferences} disabled={savingPrefs}>{savingPrefs ? "Saving..." : "Save preferences"}</Button>

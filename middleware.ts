@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
-const COOKIE_NAME = "vaultflow_session";
+const COOKIE_NAME = "scopeboard_session";
 const publicPaths = ["/", "/signin", "/signup", "/login"];
 
 type MiddlewareSession = {

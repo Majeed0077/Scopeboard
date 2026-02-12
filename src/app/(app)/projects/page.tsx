@@ -13,9 +13,9 @@ export default function ProjectsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Projects</h1>
+        <h1 className="text-2xl font-semibold">Projects & Pipeline</h1>
         <p className="text-sm text-muted-foreground">
-          Track delivery timelines and milestone progress.
+          Track delivery timelines, milestones, and pipeline movement in one place.
         </p>
       </div>
       <ProjectsList projects={projects} budgetTierById={budgetTierById} isOwner={isOwner} />

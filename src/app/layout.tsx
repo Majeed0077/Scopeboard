@@ -4,7 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Flowlane",
+  title: "ScopeBoard",
   description: "Internal agency CRM dashboard",
 };
 

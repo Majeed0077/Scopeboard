@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -130,11 +130,11 @@ export function AuditLogTable({ items }: { items: AuditEvent[] }) {
                     </div>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {item.entityType ?? "—"}
+                    {item.entityType ?? "-"}
                     {item.entityId ? ` · ${item.entityId}` : ""}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {item.meta ?? "—"}
+                    {item.meta ?? "-"}
                   </TableCell>
                   <TableCell className="text-right text-xs text-muted-foreground">
                     {formatDate(item.createdAt)}

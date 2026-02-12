@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import type { Milestone, MilestoneStatus, Project } from "@/types";
+import type { Milestone, MilestoneStatus, Project, ProjectStatus } from "@/types";
 import { formatMoney, formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -25,13 +26,35 @@ import { useLocalData } from "@/lib/localDataStore";
 import { FileImage, FileSpreadsheet, FileText } from "lucide-react";
 import { api } from "@/lib/api";
 
-const statusOptions: { value: MilestoneStatus; label: string }[] = [
+const milestoneStatusOptions: { value: MilestoneStatus; label: string }[] = [
   { value: "pending", label: "Pending" },
   { value: "in_progress", label: "In Progress" },
   { value: "blocked", label: "Blocked" },
   { value: "waiting_client", label: "Waiting on Client" },
   { value: "done", label: "Done" },
 ];
+
+const projectStatusOptions: { value: ProjectStatus; label: string }[] = [
+  { value: "planning", label: "Planning" },
+  { value: "active", label: "Active" },
+  { value: "on_hold", label: "On Hold" },
+  { value: "completed", label: "Completed" },
+];
+
+function parseLinks(value: string) {
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => {
+      try {
+        new URL(line);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+}
 
 export function ProjectDetail({
   project,
@@ -44,6 +67,7 @@ export function ProjectDetail({
   budgetTier?: "Low" | "Medium" | "High";
   isOwner: boolean;
 }) {
+  const [currentProject, setCurrentProject] = useState(project);
   const [items, setItems] = useState<Milestone[]>(milestones);
   const [drafts, setDrafts] = useState<
     { id: string; title: string; amount: number; currency: string }[]
@@ -55,12 +79,48 @@ export function ProjectDetail({
   const [milestoneAmount, setMilestoneAmount] = useState("");
   const [milestoneCurrency, setMilestoneCurrency] = useState("USD");
   const [milestoneStatus, setMilestoneStatus] = useState<MilestoneStatus>("pending");
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editTitle, setEditTitle] = useState(project.title);
+  const [editStatus, setEditStatus] = useState<ProjectStatus>(project.status);
+  const [editStartDate, setEditStartDate] = useState(project.startDate.slice(0, 10));
+  const [editDueDate, setEditDueDate] = useState(project.dueDate.slice(0, 10));
+  const [editBudgetAmount, setEditBudgetAmount] = useState(String(project.budgetAmount ?? 0));
+  const [editCurrency, setEditCurrency] = useState(project.currency ?? "USD");
+  const [editNotes, setEditNotes] = useState(project.notes ?? "");
+  const [editLinksText, setEditLinksText] = useState((project.links ?? []).join("\n"));
+
   const role = useRole();
   const { addActivity } = useActivity();
   const { setProjects, setMilestones, setInvoices } = useLocalData();
-  const projectLinks = project.links ?? [];
+  const canEditProject = hasPermission(role, "projects:edit");
+
+  const projectLinks = currentProject.links ?? [];
   const visibleLinks = projectLinks.slice(0, 3);
   const remainingLinks = projectLinks.length - visibleLinks.length;
+
+  useEffect(() => {
+    setItems(milestones);
+  }, [milestones]);
+
+  useEffect(() => {
+    setCurrentProject(project);
+    setArchived(project.archived);
+    setEditTitle(project.title);
+    setEditStatus(project.status);
+    setEditStartDate(project.startDate.slice(0, 10));
+    setEditDueDate(project.dueDate.slice(0, 10));
+    setEditBudgetAmount(String(project.budgetAmount ?? 0));
+    setEditCurrency(project.currency ?? "USD");
+    setEditNotes(project.notes ?? "");
+    setEditLinksText((project.links ?? []).join("\n"));
+    setIsEditing(false);
+  }, [project]);
+
+  const sorted = useMemo(() => {
+    return [...items].sort((a, b) => a.order - b.order);
+  }, [items]);
 
   const formatLinkLabel = (value: string, index: number) => {
     try {
@@ -90,13 +150,47 @@ export function ProjectDetail({
     return <FileText className="h-3.5 w-3.5" />;
   };
 
-  const sorted = useMemo(() => {
-    return [...items].sort((a, b) => a.order - b.order);
-  }, [items]);
+  async function saveProjectEdits() {
+    if (!editTitle.trim()) {
+      toast.error("Project title is required.");
+      return;
+    }
 
-  useEffect(() => {
-    setItems(milestones);
-  }, [milestones]);
+    const payload: Partial<Project> = {
+      title: editTitle.trim(),
+      status: editStatus,
+      startDate: new Date(editStartDate || currentProject.startDate).toISOString(),
+      dueDate: new Date(editDueDate || currentProject.dueDate).toISOString(),
+      notes: editNotes.trim() || undefined,
+      links: parseLinks(editLinksText),
+    };
+
+    if (isOwner) {
+      payload.budgetAmount = Number(editBudgetAmount || 0);
+      payload.currency = editCurrency;
+    }
+
+    setEditLoading(true);
+    try {
+      const updated = await api.updateProject(currentProject.id, payload);
+      setCurrentProject(updated);
+      setArchived(updated.archived);
+      setProjects((prev) =>
+        prev.map((item) => (item.id === updated.id ? { ...item, ...updated } : item)),
+      );
+      setIsEditing(false);
+      toast.success("Project updated.");
+      addActivity({
+        entityType: "project",
+        entityId: currentProject.id,
+        action: "Project updated",
+      });
+    } catch {
+      toast.error("Unable to update project.");
+    } finally {
+      setEditLoading(false);
+    }
+  }
 
   async function updateStatus(id: string, status: MilestoneStatus) {
     if (!hasPermission(role, "milestones:update")) {
@@ -118,7 +212,7 @@ export function ProjectDetail({
       toast.success("Milestone updated.");
       addActivity({
         entityType: "project",
-        entityId: project.id,
+        entityId: currentProject.id,
         action: "Milestone status updated",
         meta: `Milestone ${id} set to ${status.replace("_", " ")}`,
       });
@@ -132,7 +226,7 @@ export function ProjectDetail({
       toast.error("Only the owner can do this.");
       return;
     }
-    if (!project.contactId) {
+    if (!currentProject.contactId) {
       toast.error("Add a client to this project before creating invoices.");
       return;
     }
@@ -140,8 +234,8 @@ export function ProjectDetail({
     try {
       const created = await api.createInvoice({
         invoiceNo,
-        contactId: project.contactId,
-        projectId: project.id,
+        contactId: currentProject.contactId,
+        projectId: currentProject.id,
         status: "unpaid",
         issueDate: new Date().toISOString(),
         dueDate: milestone.dueDate,
@@ -162,7 +256,7 @@ export function ProjectDetail({
       toast.success("Invoice draft created.");
       addActivity({
         entityType: "project",
-        entityId: project.id,
+        entityId: currentProject.id,
         action: "Invoice draft created",
         meta: milestone.title,
       });
@@ -178,7 +272,7 @@ export function ProjectDetail({
     }
     const nextOrder = items.length ? Math.max(...items.map((item) => item.order)) + 1 : 1;
     const payload: Partial<Milestone> = {
-      projectId: project.id,
+      projectId: currentProject.id,
       title: milestoneTitle.trim(),
       status: milestoneStatus,
       dueDate: milestoneDue ? new Date(milestoneDue).toISOString() : undefined,
@@ -193,7 +287,7 @@ export function ProjectDetail({
       toast.success("Milestone added.");
       addActivity({
         entityType: "project",
-        entityId: project.id,
+        entityId: currentProject.id,
         action: "Milestone created",
         meta: created.title,
       });
@@ -213,46 +307,52 @@ export function ProjectDetail({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-sm text-muted-foreground">Project</p>
-          <h1 className="text-2xl font-semibold">{project.title}</h1>
+          <h1 className="text-2xl font-semibold">{currentProject.title}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span>Start {formatDate(project.startDate)}</span>
+            <span>Start {formatDate(currentProject.startDate)}</span>
             <span>-</span>
-            <span>Due {formatDate(project.dueDate)}</span>
+            <span>Due {formatDate(currentProject.dueDate)}</span>
             <span>-</span>
             <span>
               {isOwner
-                ? formatMoney(project.budgetAmount ?? 0, project.currency ?? "USD")
+                ? formatMoney(currentProject.budgetAmount ?? 0, currentProject.currency ?? "USD")
                 : budgetTier
                   ? `${budgetTier} budget`
                   : "Budget hidden"}
             </span>
-            {archived && (
+            {archived ? (
               <>
                 <span>-</span>
                 <Badge variant="secondary">Archived</Badge>
               </>
-            )}
+            ) : null}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <DisableIfNoPermission permission="projects:edit">
+            <Button variant="outline" onClick={() => setIsEditing((prev) => !prev)}>
+              {isEditing ? "Cancel edit" : "Edit project"}
+            </Button>
+          </DisableIfNoPermission>
           <DisableIfNoPermission permission="projects:archive">
             <Button
               variant="outline"
               onClick={() => {
                 const next = !archived;
                 api
-                  .updateProject(project.id, { archived: next })
-                  .then(() => {
+                  .updateProject(currentProject.id, { archived: next })
+                  .then((updated) => {
                     setArchived(next);
+                    setCurrentProject(updated);
                     setProjects((prev) =>
                       prev.map((item) =>
-                        item.id === project.id ? { ...item, archived: next } : item,
+                        item.id === currentProject.id ? { ...item, archived: next } : item,
                       ),
                     );
                     toast.success(next ? "Archived." : "Restored.");
                     addActivity({
                       entityType: "project",
-                      entityId: project.id,
+                      entityId: currentProject.id,
                       action: next ? "Project archived" : "Project restored",
                     });
                   })
@@ -267,9 +367,9 @@ export function ProjectDetail({
               variant="destructive"
               onClick={() => {
                 api
-                  .deleteProject(project.id)
+                  .deleteProject(currentProject.id)
                   .then(() => {
-                    setProjects((prev) => prev.filter((item) => item.id !== project.id));
+                    setProjects((prev) => prev.filter((item) => item.id !== currentProject.id));
                     toast.success("Deleted.");
                   })
                   .catch(() => toast.error("Unable to delete project."));
@@ -281,10 +381,76 @@ export function ProjectDetail({
         </div>
       </div>
 
+      {isEditing ? (
+        <Card className="p-6 space-y-4">
+          <h2 className="text-sm font-semibold">Edit project</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-xs font-medium text-muted-foreground">Title</label>
+              <Input value={editTitle} onChange={(event) => setEditTitle(event.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">Status</label>
+              <Select value={editStatus} onValueChange={(value) => setEditStatus(value as ProjectStatus)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projectStatusOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">Start date</label>
+              <Input type="date" value={editStartDate} onChange={(event) => setEditStartDate(event.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">Due date</label>
+              <Input type="date" value={editDueDate} onChange={(event) => setEditDueDate(event.target.value)} />
+            </div>
+            {isOwner ? (
+              <>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Budget amount</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={editBudgetAmount}
+                    onChange={(event) => setEditBudgetAmount(event.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Currency</label>
+                  <Input value={editCurrency} onChange={(event) => setEditCurrency(event.target.value.toUpperCase())} />
+                </div>
+              </>
+            ) : null}
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-xs font-medium text-muted-foreground">Description</label>
+              <Textarea rows={5} value={editNotes} onChange={(event) => setEditNotes(event.target.value)} />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-xs font-medium text-muted-foreground">Links (one URL per line)</label>
+              <Textarea rows={4} value={editLinksText} onChange={(event) => setEditLinksText(event.target.value)} />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
+            <Button onClick={saveProjectEdits} disabled={editLoading}>
+              {editLoading ? "Saving..." : "Save changes"}
+            </Button>
+          </div>
+        </Card>
+      ) : null}
+
       <Card className="p-6 space-y-4">
         <h2 className="text-sm font-semibold">Project details</h2>
         <div className="space-y-2 text-sm text-muted-foreground">
-          <p>{project.notes || "No description yet."}</p>
+          <p>{currentProject.notes || "No description yet."}</p>
           <div className="flex flex-wrap gap-2 text-xs">
             {visibleLinks.length === 0 ? (
               <span>No links yet.</span>
@@ -307,9 +473,9 @@ export function ProjectDetail({
           </div>
           <div className="space-y-1">
             <p className="text-xs font-medium text-foreground">Attachments</p>
-            {project.attachments && project.attachments.length > 0 ? (
+            {currentProject.attachments && currentProject.attachments.length > 0 ? (
               <div className="flex flex-wrap gap-2">
-                {project.attachments.map((item, index) => (
+                {currentProject.attachments.map((item, index) => (
                   <a
                     key={`${item.url}-${index}`}
                     className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs hover:bg-muted/40"
@@ -323,7 +489,7 @@ export function ProjectDetail({
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground">—</p>
+              <p className="text-xs text-muted-foreground">-</p>
             )}
           </div>
         </div>
@@ -370,7 +536,7 @@ export function ProjectDetail({
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  {statusOptions.map((option) => (
+                  {milestoneStatusOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
@@ -431,7 +597,7 @@ export function ProjectDetail({
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
-                      {statusOptions.map((option) => (
+                      {milestoneStatusOptions.map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
                         </SelectItem>
@@ -473,9 +639,8 @@ export function ProjectDetail({
 
       <div className="space-y-3">
         <h2 className="text-sm font-semibold">Activity</h2>
-        <ActivityTimeline entityType="project" entityId={project.id} />
+        <ActivityTimeline entityType="project" entityId={currentProject.id} />
       </div>
-
     </div>
   );
 }

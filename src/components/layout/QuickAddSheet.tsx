@@ -25,6 +25,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+function getDefaultFollowupDate() {
+  return new Date(Date.now() + 1000 * 60 * 60 * 24 * 2).toISOString().slice(0, 10);
+}
+
 export function QuickAddSheet({
   children,
   open: openProp,
@@ -108,11 +112,11 @@ export function QuickAddSheet({
     }
   }, [showOtherSource]);
 
-  const [followupDate, setFollowupDate] = useState(
-    new Date(Date.now() + 1000 * 60 * 60 * 24 * 2)
-      .toISOString()
-      .slice(0, 10),
-  );
+  const [followupDate, setFollowupDate] = useState("");
+
+  React.useEffect(() => {
+    if (!followupDate) setFollowupDate(getDefaultFollowupDate());
+  }, [followupDate]);
 
   const canSave = useMemo(() => {
     if (!leadName.trim()) return false;

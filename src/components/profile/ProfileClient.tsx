@@ -83,7 +83,7 @@ export function ProfileClient({ initialProfile }: { initialProfile?: Profile | n
     }
 
     setProfile(payload.data);
-    window.dispatchEvent(new Event("vaultflow-profile-updated"));
+    window.dispatchEvent(new Event("scopeboard-profile-updated"));
   }
 
   async function handleSave() {

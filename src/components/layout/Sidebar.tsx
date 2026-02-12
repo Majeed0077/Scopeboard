@@ -4,9 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutGrid,
-  Layers,
-  Users,
+  LayoutGrid,  Users,
   FolderKanban,
   Receipt,
   CalendarCheck,
@@ -30,9 +28,8 @@ const navItems = [
   { href: "/chat", label: "Chat", icon: MessageCircle },
   { href: "/today", label: "Today", icon: CalendarCheck },
   { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
-  { href: "/crm", label: "Pipeline", icon: Layers },
-  { href: "/contacts", label: "Contacts", icon: Users },
-  { href: "/projects", label: "Projects", icon: FolderKanban },
+    { href: "/contacts", label: "Contacts", icon: Users },
+  { href: "/projects", label: "Projects & Pipeline", icon: FolderKanban },
   { href: "/settings/workspace", label: "Team", icon: UsersRound },
 ];
 
@@ -91,12 +88,12 @@ export function Sidebar({ initialRole }: { initialRole?: "owner" | "editor" | nu
   }, [isOwner, router, visibleNavItems]);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem("vaultflow-sidebar-collapsed");
+    const stored = window.localStorage.getItem("scopeboard-sidebar-collapsed");
     setCollapsed(stored === "true");
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem("vaultflow-sidebar-collapsed", String(collapsed));
+    window.localStorage.setItem("scopeboard-sidebar-collapsed", String(collapsed));
   }, [collapsed]);
 
   return (
@@ -116,7 +113,7 @@ export function Sidebar({ initialRole }: { initialRole?: "owner" | "editor" | nu
           >
             <Image
               src={collapsed ? "/icon a.png" : "/Logo.png"}
-              alt="Flowlane"
+              alt="ScopeBoard"
               width={collapsed ? 32 : 200}
               height={collapsed ? 32 : 48}
               className={cn("object-contain", collapsed ? "h-8 w-8" : "h-10 w-auto")}

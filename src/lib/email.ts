@@ -50,7 +50,7 @@ export async function sendInviteEmail(input: InviteEmailInput): Promise<InviteEm
       body: JSON.stringify({
         from: fromEmail,
         to: [input.to],
-        subject: "You are invited to Flowlane",
+        subject: "You are invited to ScopeBoard",
         html: buildInviteHtml(input),
       }),
     });

@@ -182,7 +182,7 @@ export default function DashboardPage() {
             <StatCard
               title="Waiting on Client"
               value={waitingOnClient}
-              href="/crm"
+              href="/projects"
             />
           </>
         )}

@@ -16,10 +16,6 @@ const AuditSchema = new Schema(
   { timestamps: false },
 );
 
+AuditSchema.index({ workspaceId: 1, createdAt: -1 });
+
 export const AuditModel = mongoose.models.Audit || mongoose.model("Audit", AuditSchema);
-
-
-
-
-
-

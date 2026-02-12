@@ -18,6 +18,10 @@ import { useRole } from "@/lib/useRole";
 import { api } from "@/lib/api";
 import type { ProjectStatus, ContactSource } from "@/types";
 
+function getDefaultFollowupDate() {
+  return new Date(Date.now() + 1000 * 60 * 60 * 24 * 2).toISOString().slice(0, 10);
+}
+
 export function ProjectCreatePanel({
   open,
   onOpenChange,
@@ -37,9 +41,7 @@ export function ProjectCreatePanel({
   const [newContactName, setNewContactName] = React.useState("");
   const [newContactSource, setNewContactSource] =
     React.useState<ContactSource>("referral");
-  const [newContactFollowUp, setNewContactFollowUp] = React.useState(
-    new Date(Date.now() + 1000 * 60 * 60 * 24 * 2).toISOString().slice(0, 10),
-  );
+  const [newContactFollowUp, setNewContactFollowUp] = React.useState("");
   const [status, setStatus] = React.useState<ProjectStatus>("planning");
   const [dueDate, setDueDate] = React.useState("");
   const [budgetAmount, setBudgetAmount] = React.useState("");
@@ -54,6 +56,10 @@ export function ProjectCreatePanel({
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const canSave = title.trim().length > 0;
+
+  React.useEffect(() => {
+    if (!newContactFollowUp) setNewContactFollowUp(getDefaultFollowupDate());
+  }, [newContactFollowUp]);
 
   React.useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -146,11 +152,7 @@ export function ProjectCreatePanel({
       setShowCreateContact(false);
       setNewContactName("");
       setNewContactSource("referral");
-      setNewContactFollowUp(
-        new Date(Date.now() + 1000 * 60 * 60 * 24 * 2)
-          .toISOString()
-          .slice(0, 10),
-      );
+      setNewContactFollowUp(getDefaultFollowupDate());
       setStatus("planning");
       setDueDate("");
       setBudgetAmount("");
@@ -228,11 +230,7 @@ export function ProjectCreatePanel({
     setShowCreateContact(false);
     setNewContactName("");
     setNewContactSource("referral");
-    setNewContactFollowUp(
-      new Date(Date.now() + 1000 * 60 * 60 * 24 * 2)
-        .toISOString()
-        .slice(0, 10),
-    );
+    setNewContactFollowUp(getDefaultFollowupDate());
   }
 
   async function handleRemoveAttachment(

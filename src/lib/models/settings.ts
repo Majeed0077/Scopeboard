@@ -4,7 +4,7 @@ const SettingsSchema = new Schema(
   {
     _id: { type: String, required: true },
     workspaceId: { type: String, required: true, index: true, default: "default" },
-    orgName: { type: String, default: "Flowlane" },
+    orgName: { type: String, default: "ScopeBoard" },
     timezone: { type: String, default: "UTC" },
     logoUrl: { type: String, default: "" },
     updatedAt: { type: String, required: true },

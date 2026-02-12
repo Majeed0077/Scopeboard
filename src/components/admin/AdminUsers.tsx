@@ -17,7 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { EmptyState } from "@/components/common/EmptyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
@@ -156,7 +155,7 @@ export function AdminUsers({
       setWorkspaceLogo(updated.logoUrl ?? "");
       toast.success("Team profile updated.");
       window.dispatchEvent(
-        new CustomEvent("vaultflow-workspace-updated", {
+        new CustomEvent("scopeboard-workspace-updated", {
           detail: { workspaceId: updated.id, name: updated.name },
         }),
       );
@@ -279,7 +278,7 @@ export function AdminUsers({
       const result = await api.deleteWorkspace(activeWorkspaceId);
       toast.success("Team deleted.");
       window.dispatchEvent(
-        new CustomEvent("vaultflow-workspace-updated", {
+        new CustomEvent("scopeboard-workspace-updated", {
           detail: { workspaceId: result.switchedWorkspaceId },
         }),
       );
@@ -437,7 +436,10 @@ export function AdminUsers({
       ) : null}
 
       {invites.length === 0 ? (
-        <EmptyState title="No invites yet" description="Invite your first teammate by email." />
+        <div className="rounded-lg border border-dashed bg-background p-8 text-center">
+          <p className="text-sm font-semibold">No invites yet</p>
+          <p className="mt-2 text-sm text-muted-foreground">Invite your first teammate by email.</p>
+        </div>
       ) : (
         <div className="rounded-xl border bg-card">
           <Table>
@@ -484,7 +486,10 @@ export function AdminUsers({
       )}
 
       {users.length === 0 ? (
-        <EmptyState title="No active users yet" description="Accepted invites will appear here." />
+        <div className="rounded-lg border border-dashed bg-background p-8 text-center">
+          <p className="text-sm font-semibold">No active users yet</p>
+          <p className="mt-2 text-sm text-muted-foreground">Accepted invites will appear here.</p>
+        </div>
       ) : (
         <div className="rounded-xl border bg-card">
           <Table>

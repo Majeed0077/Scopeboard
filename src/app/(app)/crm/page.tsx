@@ -1,5 +1,5 @@
-import { PipelineBoard } from "@/components/crm/PipelineBoard";
+import { redirect } from "next/navigation";
 
-export default async function CrmPage() {
-  return <PipelineBoard />;
+export default function CrmPage() {
+  redirect("/projects");
 }

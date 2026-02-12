@@ -5,7 +5,7 @@ import type { User } from "@/types";
 export const users: User[] = [
   {
     id: "u-001",
-    name: "Flowlane Owner",
+    name: "ScopeBoard Owner",
     email: "owner@flowlane.local",
     passwordHash: "<seeded-in-db>",
     role: "owner",
@@ -13,7 +13,7 @@ export const users: User[] = [
   },
   {
     id: "u-002",
-    name: "Flowlane Editor",
+    name: "ScopeBoard Editor",
     email: "editor@flowlane.local",
     passwordHash: "<seeded-in-db>",
     role: "editor",

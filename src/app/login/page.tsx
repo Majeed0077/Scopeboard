@@ -45,7 +45,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
       <Card className="w-full max-w-md space-y-6 p-8">
         <div>
-          <p className="text-sm text-muted-foreground">Flowlane</p>
+          <p className="text-sm text-muted-foreground">ScopeBoard</p>
           <h1 className="text-2xl font-semibold">Welcome back</h1>
           <p className="text-sm text-muted-foreground">
             Sign in to access the internal CRM.

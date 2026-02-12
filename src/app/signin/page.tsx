@@ -98,7 +98,7 @@ export default function SignInPage() {
                 </p>
                 <h2 className="text-2xl font-semibold">Welcome back</h2>
                 <p className="text-sm text-muted-foreground">
-                  Use your Flowlane account to continue.
+                  Use your ScopeBoard account to continue.
                 </p>
               </div>
             </div>

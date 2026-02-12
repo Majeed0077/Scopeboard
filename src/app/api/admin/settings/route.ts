@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     const created = await SettingsModel.create({
       _id: SETTINGS_ID,
       workspaceId: session.workspaceId,
-      orgName: "Flowlane",
+      orgName: "ScopeBoard",
       timezone: "UTC",
       logoUrl: "",
       updatedAt: new Date().toISOString(),

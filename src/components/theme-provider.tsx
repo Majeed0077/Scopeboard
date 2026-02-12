@@ -9,7 +9,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       attribute="class"
       defaultTheme="system"
       enableSystem
-      storageKey="vaultflow-theme"
+      storageKey="scopeboard-theme"
       disableTransitionOnChange
     >
       {children}

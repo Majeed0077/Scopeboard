@@ -29,11 +29,7 @@ export default async function EditorPage() {
       <div className="grid gap-3 md:grid-cols-2">
         <Link className="rounded-xl border bg-card p-4 hover:bg-muted/30" href="/today">
           Today
-        </Link>
-        <Link className="rounded-xl border bg-card p-4 hover:bg-muted/30" href="/crm">
-          Pipeline
-        </Link>
-        <Link className="rounded-xl border bg-card p-4 hover:bg-muted/30" href="/contacts">
+        </Link>        <Link className="rounded-xl border bg-card p-4 hover:bg-muted/30" href="/contacts">
           Contacts
         </Link>
         <Link className="rounded-xl border bg-card p-4 hover:bg-muted/30" href="/projects">
