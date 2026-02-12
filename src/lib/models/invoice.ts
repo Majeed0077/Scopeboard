@@ -3,6 +3,7 @@ import mongoose, { Schema } from "mongoose";
 const InvoiceSchema = new Schema(
   {
     _id: { type: String, required: true },
+    workspaceId: { type: String, required: true, index: true, default: "default" },
     invoiceNo: { type: String, required: true },
     projectId: { type: String, required: true },
     contactId: { type: String, required: true },
@@ -41,6 +42,11 @@ const InvoiceSchema = new Schema(
   },
   { timestamps: true },
 );
+
+InvoiceSchema.index({ workspaceId: 1, invoiceNo: 1 }, { unique: true });
+InvoiceSchema.index({ workspaceId: 1, status: 1, archived: 1 });
+InvoiceSchema.index({ workspaceId: 1, dueDate: 1 });
+InvoiceSchema.index({ workspaceId: 1, projectId: 1 });
 
 export const InvoiceModel =
   mongoose.models.Invoice || mongoose.model("Invoice", InvoiceSchema);

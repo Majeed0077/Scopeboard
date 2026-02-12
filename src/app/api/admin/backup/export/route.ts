@@ -22,22 +22,25 @@ export async function GET(req: Request) {
   } catch {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
+
   await dbConnect();
+  const scope = { workspaceId: session.workspaceId };
   const [contacts, projects, invoices, milestones, activities, users, settings, chat, notifications] =
     await Promise.all([
-      ContactModel.find().lean(),
-      ProjectModel.find().lean(),
-      InvoiceModel.find().lean(),
-      MilestoneModel.find().lean(),
-      ActivityModel.find().lean(),
-      UserModel.find().lean(),
-      SettingsModel.find().lean(),
-      ChatMessageModel.find().lean(),
-      NotificationModel.find().lean(),
+      ContactModel.find(scope).lean(),
+      ProjectModel.find(scope).lean(),
+      InvoiceModel.find(scope).lean(),
+      MilestoneModel.find(scope).lean(),
+      ActivityModel.find(scope).lean(),
+      UserModel.find(scope).lean(),
+      SettingsModel.find(scope).lean(),
+      ChatMessageModel.find(scope).lean(),
+      NotificationModel.find(scope).lean(),
     ]);
 
   await AuditModel.create({
     _id: `aud-${crypto.randomUUID().slice(0, 8)}`,
+    workspaceId: session.workspaceId,
     createdAt: new Date().toISOString(),
     actorId: session.userId,
     actorRole: session.role,
@@ -50,6 +53,7 @@ export async function GET(req: Request) {
     success: true,
     data: {
       version: 1,
+      workspaceId: session.workspaceId,
       exportedAt: new Date().toISOString(),
       contacts,
       projects,

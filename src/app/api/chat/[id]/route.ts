@@ -14,13 +14,20 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
   } catch {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
+
   await dbConnect();
-  const deleted = await ChatMessageModel.findByIdAndDelete(params.id).lean();
+  const deleted = await ChatMessageModel.findOneAndDelete({
+    _id: params.id,
+    workspaceId: session.workspaceId,
+  }).lean();
+
   if (!deleted) {
     return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
   }
+
   await AuditModel.create({
     _id: `aud-${crypto.randomUUID().slice(0, 8)}`,
+    workspaceId: session.workspaceId,
     createdAt: new Date().toISOString(),
     actorId: session.userId,
     actorRole: session.role,
@@ -29,5 +36,6 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     entityType: deleted.entityType,
     entityId: deleted.entityId,
   });
+
   return NextResponse.json({ success: true, data: { id: params.id } });
 }

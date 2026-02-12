@@ -3,6 +3,7 @@ import { AuditModel } from "@/lib/models/audit";
 import type { Role } from "@/lib/rbac";
 
 export async function logAuditEvent(params: {
+  workspaceId?: string;
   actorId?: string;
   actorRole?: Role | string;
   actorEmail?: string;
@@ -15,6 +16,7 @@ export async function logAuditEvent(params: {
   const id = `aud-${crypto.randomUUID().slice(0, 8)}`;
   await AuditModel.create({
     _id: id,
+    workspaceId: params.workspaceId ?? "default",
     createdAt: new Date().toISOString(),
     ...params,
   });

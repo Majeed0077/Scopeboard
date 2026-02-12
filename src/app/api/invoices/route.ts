@@ -18,8 +18,9 @@ export async function GET(req: Request) {
   } catch {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
+
   await dbConnect();
-  const invoices = await InvoiceModel.find().lean();
+  const invoices = await InvoiceModel.find({ workspaceId: session.workspaceId }).lean();
   const data = invoices.map((item) =>
     sanitizeInvoiceForRole({ id: item._id, ...item }, session.role),
   );
@@ -33,6 +34,7 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
+
   await dbConnect();
   const body = await req.json();
   const parsed = invoiceCreateSchema.safeParse(body);
@@ -42,13 +44,19 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
+
   try {
     assertCanWriteInvoiceFields(parsed.data as Record<string, unknown>, session.role);
   } catch (error) {
     return NextResponse.json({ success: false, error: String(error) }, { status: 400 });
   }
+
   const id = `i-${crypto.randomUUID().slice(0, 8)}`;
-  const created = await InvoiceModel.create({ _id: id, ...parsed.data });
+  const created = await InvoiceModel.create({
+    _id: id,
+    workspaceId: session.workspaceId,
+    ...parsed.data,
+  });
   const serialized = serialize(created);
   return NextResponse.json({
     success: true,

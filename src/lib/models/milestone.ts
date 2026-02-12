@@ -3,6 +3,7 @@ import mongoose, { Schema } from "mongoose";
 const MilestoneSchema = new Schema(
   {
     _id: { type: String, required: true },
+    workspaceId: { type: String, required: true, index: true, default: "default" },
     projectId: { type: String, required: true },
     title: { type: String, required: true },
     status: { type: String, default: "pending" },
@@ -13,6 +14,9 @@ const MilestoneSchema = new Schema(
   },
   { timestamps: true },
 );
+
+MilestoneSchema.index({ workspaceId: 1, projectId: 1, status: 1 });
+MilestoneSchema.index({ workspaceId: 1, dueDate: 1 });
 
 export const MilestoneModel =
   mongoose.models.Milestone || mongoose.model("Milestone", MilestoneSchema);

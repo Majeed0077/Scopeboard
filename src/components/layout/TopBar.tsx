@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Plus, Search } from "lucide-react";
+import { LogOut, Plus, Search, Settings, UserCircle2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -12,6 +12,15 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { ProjectCreatePanel } from "@/components/projects/ProjectCreatePanel";
 import { useRouter } from "next/navigation";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type SearchResult = {
   contacts: { id: string; name: string; company?: string }[];
@@ -25,12 +34,25 @@ type HeaderUser = {
   avatarUrl?: string;
 };
 
+type WorkspaceItem = {
+  id: string;
+  name: string;
+  logoUrl?: string;
+  role: "owner" | "editor";
+  isPersonal: boolean;
+  isActive: boolean;
+};
+
 export function TopBar({
   initialRole,
   initialUser,
+  initialWorkspaces = [],
+  initialActiveWorkspaceId = "",
 }: {
   initialRole?: "owner" | "editor" | null;
   initialUser?: HeaderUser | null;
+  initialWorkspaces?: WorkspaceItem[];
+  initialActiveWorkspaceId?: string;
 }) {
   const [user, setUser] = useState<HeaderUser | null>(
     initialUser ?? (initialRole ? { role: initialRole } : null),
@@ -41,6 +63,12 @@ export function TopBar({
   const [projectOpen, setProjectOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [switchingWorkspace, setSwitchingWorkspace] = useState(false);
+  const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>(initialWorkspaces);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState(initialActiveWorkspaceId);
+  const [createTeamOpen, setCreateTeamOpen] = useState(false);
+  const [createTeamName, setCreateTeamName] = useState("");
+  const [creatingTeam, setCreatingTeam] = useState(false);
   const [results, setResults] = useState<SearchResult>({
     contacts: [],
     projects: [],
@@ -76,34 +104,39 @@ export function TopBar({
 
   useEffect(() => {
     let mounted = true;
-    fetch("/api/auth/me")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!mounted || !data?.success || !data?.data?.role) return;
+
+    async function loadHeaderData() {
+      const meRes = await fetch("/api/auth/me").then((res) => (res.ok ? res.json() : null));
+      if (mounted && meRes?.success && meRes?.data?.role) {
         setUser({
-          role: data.data.role,
-          name: data.data.name,
-          avatarUrl: data.data.avatarUrl,
+          role: meRes.data.role,
+          name: meRes.data.name,
+          avatarUrl: meRes.data.avatarUrl,
         });
-      })
-      .catch(() => undefined);
-    function handleProfileUpdate() {
-      fetch("/api/auth/me")
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (!data?.success || !data?.data?.role) return;
-          setUser({
-            role: data.data.role,
-            name: data.data.name,
-            avatarUrl: data.data.avatarUrl,
-          });
-        })
-        .catch(() => undefined);
+      }
+
+      const wsRes = await fetch("/api/workspaces", { cache: "no-store" }).then((res) =>
+        res.ok ? res.json() : null,
+      );
+      if (mounted && wsRes?.success && Array.isArray(wsRes?.data)) {
+        setWorkspaces(wsRes.data);
+        const active = wsRes.data.find((item: WorkspaceItem) => item.isActive);
+        setActiveWorkspaceId(active?.id ?? wsRes.data[0]?.id ?? "");
+      }
     }
-    window.addEventListener("vaultflow-profile-updated", handleProfileUpdate);
+
+    loadHeaderData().catch(() => undefined);
+
+    function handleHeaderRefresh() {
+      loadHeaderData().catch(() => undefined);
+    }
+
+    window.addEventListener("vaultflow-profile-updated", handleHeaderRefresh);
+    window.addEventListener("vaultflow-workspace-updated", handleHeaderRefresh as EventListener);
     return () => {
       mounted = false;
-      window.removeEventListener("vaultflow-profile-updated", handleProfileUpdate);
+      window.removeEventListener("vaultflow-profile-updated", handleHeaderRefresh);
+      window.removeEventListener("vaultflow-workspace-updated", handleHeaderRefresh as EventListener);
     };
   }, []);
 
@@ -134,6 +167,83 @@ export function TopBar({
     [results],
   );
 
+  const activeWorkspace = useMemo(
+    () => workspaces.find((workspace) => workspace.id === activeWorkspaceId) ?? null,
+    [workspaces, activeWorkspaceId],
+  );
+
+  async function handleWorkspaceChange(workspaceId: string) {
+    if (!workspaceId) return;
+
+    if (workspaceId === "__create__") {
+      setCreateTeamOpen(true);
+      return;
+    }
+
+    if (workspaceId === activeWorkspaceId) return;
+    setSwitchingWorkspace(true);
+    try {
+      const res = await fetch("/api/workspaces/switch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspaceId }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.error ?? "Unable to switch workspace.");
+      }
+      setActiveWorkspaceId(workspaceId);
+      router.refresh();
+      window.location.reload();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setSwitchingWorkspace(false);
+    }
+  }
+
+  async function handleCreateTeam() {
+    const name = createTeamName.trim();
+    if (name.length < 2) return;
+
+    setCreatingTeam(true);
+    try {
+      const createRes = await fetch("/api/workspaces", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const createJson = await createRes.json();
+      if (!createRes.ok || !createJson?.success) {
+        throw new Error(createJson?.error ?? "Unable to create workspace.");
+      }
+
+      const createdId = createJson?.data?.id as string;
+      const createdName = createJson?.data?.name as string;
+      if (createdId) {
+        setCreateTeamOpen(false);
+        setCreateTeamName("");
+        if (createdName) {
+          window.dispatchEvent(
+            new CustomEvent("vaultflow-workspace-updated", {
+              detail: { workspaceId: createdId, name: createdName },
+            }),
+          );
+        }
+        await handleWorkspaceChange(createdId);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setCreatingTeam(false);
+    }
+  }
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    window.location.href = "/";
+  }
+
   return (
     <>
       <header className="sticky top-0 z-40 flex items-center justify-between border-b px-8 py-4 glass">
@@ -158,7 +268,7 @@ export function TopBar({
             <div className="absolute left-0 top-12 z-50 w-[420px] rounded-xl border bg-background shadow-lg">
               <div className="flex items-center justify-between border-b px-4 py-2 text-xs text-muted-foreground">
                 <span>Search results</span>
-                {searchLoading ? <span>Searching…</span> : <span>{totalResults} results</span>}
+                {searchLoading ? <span>Searching...</span> : <span>{totalResults} results</span>}
               </div>
               <div className="space-y-3 px-4 py-3 text-sm">
                 <div>
@@ -176,7 +286,7 @@ export function TopBar({
                         >
                           {item.name}
                           {item.company ? (
-                            <span className="text-xs text-muted-foreground"> · {item.company}</span>
+                            <span className="text-xs text-muted-foreground"> - {item.company}</span>
                           ) : null}
                         </Link>
                       ))
@@ -228,42 +338,47 @@ export function TopBar({
                   className="text-foreground hover:underline"
                   onClick={() => setSearchOpen(false)}
                 >
-                  View all results →
+                  View all results {"->"}
                 </Link>
               </div>
             </div>
           )}
         </div>
         <div className="flex items-center gap-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link
-                  href="/profile"
-                  className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border bg-muted/60 text-xs font-semibold text-foreground"
-                >
-                  {user?.avatarUrl ? (
-                    <Image
-                      src={user.avatarUrl}
-                      alt={user.name ?? "Profile"}
-                      width={32}
-                      height={32}
-                      className="h-8 w-8 object-cover"
-                    />
-                  ) : (
-                    <span suppressHydrationWarning>
-                      {user?.name?.charAt(0)?.toUpperCase() ??
-                        user?.role?.charAt(0)?.toUpperCase() ??
-                        "U"}
-                    </span>
-                  )}
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent>
-                {user?.name ?? "Profile"} - {user?.role ?? "User"}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          {workspaces.length > 0 ? (
+            <Select value={activeWorkspaceId} onValueChange={handleWorkspaceChange} disabled={switchingWorkspace}>
+              <SelectTrigger className="h-9 w-[240px]">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted/60">
+                    {activeWorkspace?.logoUrl ? (
+                      <Image
+                        src={activeWorkspace.logoUrl}
+                        alt={activeWorkspace.name}
+                        width={24}
+                        height={24}
+                        className="h-6 w-6 object-cover"
+                      />
+                    ) : (
+                      <span className="text-[10px] font-semibold text-muted-foreground">
+                        {(activeWorkspace?.name ?? "W").charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </span>
+                  <span className="truncate text-sm font-medium">
+                    {activeWorkspace?.name ?? "Workspace"}
+                  </span>
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                {workspaces.map((workspace) => (
+                  <SelectItem key={workspace.id} value={workspace.id}>
+                    {workspace.name}
+                  </SelectItem>
+                ))}
+                <SelectItem value="__create__">+ Create team</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : null}
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -274,7 +389,14 @@ export function TopBar({
               <TooltipContent>Notifications</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <ThemeToggle />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <ThemeToggle />
+              </TooltipTrigger>
+              <TooltipContent>Theme</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <Button
             variant="outline"
             className="gap-2"
@@ -286,27 +408,105 @@ export function TopBar({
           <QuickAddSheet open={quickAddOpen} onOpenChange={handleQuickAddChange}>
             <Button>Quick Add</Button>
           </QuickAddSheet>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-full"
-                  onClick={async () => {
-                    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-                    window.location.href = "/";
-                  }}
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Logout</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 overflow-hidden rounded-full border bg-muted/60 p-0"
+              >
+                {user?.avatarUrl ? (
+                  <Image
+                    src={user.avatarUrl}
+                    alt={user.name ?? "Profile"}
+                    width={36}
+                    height={36}
+                    className="h-9 w-9 object-cover"
+                  />
+                ) : (
+                  <span className="text-xs font-semibold" suppressHydrationWarning>
+                    {user?.name?.charAt(0)?.toUpperCase() ??
+                      user?.role?.charAt(0)?.toUpperCase() ??
+                      "U"}
+                  </span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <div className="px-2 py-1">
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">{user?.name ?? "User"}</span>
+                  <span className="text-xs text-muted-foreground">{user?.role ?? "member"}</span>
+                </div>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => router.push("/profile")}>
+                <UserCircle2 className="mr-2 h-4 w-4" />
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push("/settings/account")}>
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
+      {createTeamOpen ? (
+        <div className="fixed inset-0 z-[60] flex items-start justify-center pt-24">
+          <div className="w-[420px] rounded-xl border bg-background p-5 shadow-xl">
+            <div className="space-y-1">
+              <p className="text-sm font-semibold">Create team</p>
+              <p className="text-xs text-muted-foreground">Enter a name for your new team workspace.</p>
+            </div>
+            <div className="mt-4 space-y-2">
+              <Input
+                value={createTeamName}
+                onChange={(event) => setCreateTeamName(event.target.value)}
+                placeholder="Team name"
+                autoFocus
+              />
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setCreateTeamOpen(false);
+                  setCreateTeamName("");
+                }}
+                disabled={creatingTeam}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateTeam}
+                disabled={creatingTeam || createTeamName.trim().length < 2}
+              >
+                {creatingTeam ? "Creating..." : "Create team"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <ProjectCreatePanel open={projectOpen} onOpenChange={handleProjectOpenChange} />
     </>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+

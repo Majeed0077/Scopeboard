@@ -10,32 +10,30 @@ function serialize(doc: any) {
   return { id: _id, ...rest };
 }
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } },
-) {
+export async function GET(req: Request, { params }: { params: { id: string } }) {
+  let session;
   try {
-    await requireSession(req);
+    session = await requireSession(req);
   } catch {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
+
   await dbConnect();
-  const activity = await ActivityModel.findById(params.id);
+  const activity = await ActivityModel.findOne({ _id: params.id, workspaceId: session.workspaceId });
   if (!activity) {
     return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
   }
   return NextResponse.json({ success: true, data: serialize(activity) });
 }
 
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } },
-) {
+export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+  let session;
   try {
-    await requireSession(req);
+    session = await requireSession(req);
   } catch {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
+
   await dbConnect();
   const body = await req.json();
   const parsed = activityUpdateSchema.safeParse(body);
@@ -45,24 +43,28 @@ export async function PATCH(
       { status: 400 },
     );
   }
-  const updated = await ActivityModel.findByIdAndUpdate(params.id, parsed.data, { new: true });
+
+  const updated = await ActivityModel.findOneAndUpdate(
+    { _id: params.id, workspaceId: session.workspaceId },
+    parsed.data,
+    { new: true },
+  );
   if (!updated) {
     return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
   }
   return NextResponse.json({ success: true, data: serialize(updated) });
 }
 
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } },
-) {
+export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+  let session;
   try {
-    await requireSession(req);
+    session = await requireSession(req);
   } catch {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
+
   await dbConnect();
-  const deleted = await ActivityModel.findByIdAndDelete(params.id);
+  const deleted = await ActivityModel.findOneAndDelete({ _id: params.id, workspaceId: session.workspaceId });
   if (!deleted) {
     return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
   }

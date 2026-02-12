@@ -144,4 +144,43 @@ export const adminSettingsSchema = z.object({
 export const userProfileUpdateSchema = z.object({
   name: z.string().min(1).optional(),
   avatarUrl: z.string().min(1).optional().or(z.literal("")),
+  timezone: z.string().min(1).optional(),
+  language: z.string().min(1).optional(),
+  defaultLandingPage: z.enum(["today", "dashboard"]).optional(),
+  compactMode: z.boolean().optional(),
+  keyboardShortcuts: z.boolean().optional(),
+  signature: z.string().optional(),
+  notificationPrefs: z
+    .object({
+      inviteEmail: z.boolean().optional(),
+      inviteInApp: z.boolean().optional(),
+      taskDueEmail: z.boolean().optional(),
+      taskDueInApp: z.boolean().optional(),
+      mentionEmail: z.boolean().optional(),
+      mentionInApp: z.boolean().optional(),
+      invoiceEmail: z.boolean().optional(),
+      invoiceInApp: z.boolean().optional(),
+    })
+    .partial()
+    .optional(),
+});
+export const userPasswordUpdateSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required."),
+    newPassword: z.string().min(8, "New password must be at least 8 characters."),
+    confirmPassword: z.string().min(8, "Confirm password must be at least 8 characters."),
+  })
+  .refine((value) => value.newPassword === value.confirmPassword, {
+    message: "New password and confirm password do not match.",
+    path: ["confirmPassword"],
+  });
+
+export const teamInviteCreateSchema = z.object({
+  email: z.string().email(),
+  name: z.string().optional().or(z.literal("")),
+  role: z.enum(["Owner", "Editor"]),
+});
+
+export const teamInviteUpdateSchema = z.object({
+  status: z.enum(["revoked"]).optional(),
 });

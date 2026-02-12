@@ -16,8 +16,9 @@ export async function POST(req: Request) {
   }
   await dbConnect();
   await ChatMessageModel.updateMany(
-    { entityType: body.entityType, entityId: body.entityId, readBy: { $ne: session.userId } },
+    { workspaceId: session.workspaceId, entityType: body.entityType, entityId: body.entityId, readBy: { $ne: session.userId } },
     { $addToSet: { readBy: session.userId } },
   );
   return NextResponse.json({ success: true, data: { ok: true } });
 }
+

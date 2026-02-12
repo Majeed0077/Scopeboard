@@ -3,6 +3,7 @@ import mongoose, { Schema } from "mongoose";
 const AuditSchema = new Schema(
   {
     _id: { type: String, required: true },
+    workspaceId: { type: String, required: true, index: true, default: "default" },
     actorId: { type: String },
     actorRole: { type: String },
     actorEmail: { type: String },
@@ -16,3 +17,9 @@ const AuditSchema = new Schema(
 );
 
 export const AuditModel = mongoose.models.Audit || mongoose.model("Audit", AuditSchema);
+
+
+
+
+
+

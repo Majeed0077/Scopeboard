@@ -3,6 +3,7 @@ import mongoose, { Schema } from "mongoose";
 const SettingsSchema = new Schema(
   {
     _id: { type: String, required: true },
+    workspaceId: { type: String, required: true, index: true, default: "default" },
     orgName: { type: String, default: "Flowlane" },
     timezone: { type: String, default: "UTC" },
     logoUrl: { type: String, default: "" },
@@ -13,3 +14,9 @@ const SettingsSchema = new Schema(
 
 export const SettingsModel =
   mongoose.models.Settings || mongoose.model("Settings", SettingsSchema);
+
+
+
+
+
+

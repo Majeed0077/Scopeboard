@@ -10,10 +10,12 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
+
   await dbConnect();
   await NotificationModel.updateMany(
-    { readBy: { $ne: session.userId } },
+    { workspaceId: session.workspaceId, readBy: { $ne: session.userId } },
     { $addToSet: { readBy: session.userId } },
   );
+
   return NextResponse.json({ success: true, data: { ok: true } });
 }

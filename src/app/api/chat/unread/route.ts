@@ -10,17 +10,21 @@ export async function GET(req: Request) {
   } catch {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
+
   const { searchParams } = new URL(req.url);
   const entityType = searchParams.get("entityType");
   const entityId = searchParams.get("entityId");
   if (!entityType || !entityId) {
     return NextResponse.json({ success: false, error: "Missing params" }, { status: 400 });
   }
+
   await dbConnect();
   const unread = await ChatMessageModel.countDocuments({
+    workspaceId: session.workspaceId,
     entityType,
     entityId,
     readBy: { $ne: session.userId },
   });
+
   return NextResponse.json({ success: true, data: { unread } });
 }

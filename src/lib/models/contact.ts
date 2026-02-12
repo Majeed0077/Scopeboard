@@ -3,6 +3,7 @@ import mongoose, { Schema } from "mongoose";
 const ContactSchema = new Schema(
   {
     _id: { type: String, required: true },
+    workspaceId: { type: String, required: true, index: true, default: "default" },
     name: { type: String, required: true },
     email: { type: String, default: "" },
     phone: { type: String, default: "" },
@@ -28,6 +29,10 @@ const ContactSchema = new Schema(
   },
   { timestamps: true },
 );
+
+ContactSchema.index({ workspaceId: 1, stage: 1, archived: 1 });
+ContactSchema.index({ workspaceId: 1, nextFollowUpAt: 1 });
+ContactSchema.index({ workspaceId: 1, updatedAt: -1 });
 
 export const ContactModel =
   mongoose.models.Contact || mongoose.model("Contact", ContactSchema);

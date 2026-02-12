@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: "Invalid payload" }, { status: 400 });
   }
   await dbConnect();
-  const messages = await ChatMessageModel.find({ entityType, entityId: { $in: ids } })
+  const messages = await ChatMessageModel.find({ workspaceId: session.workspaceId, entityType, entityId: { $in: ids } })
     .sort({ createdAt: -1 })
     .lean();
 
@@ -43,3 +43,4 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ success: true, data: summary });
 }
+

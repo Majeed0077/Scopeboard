@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { dbConnect } from "@/lib/db";
 import { UserModel } from "@/lib/models/user";
-import { verifyPassword } from "@/lib/password";
-import { createSessionToken, getSessionCookieName } from "@/lib/auth";
+import { hashPassword, verifyPassword } from "@/lib/password";
+import { createSessionToken, getActiveWorkspaceCookieName, getSessionCookieName } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
+import { getClientIp, rateLimit } from "@/lib/rateLimit";
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -20,23 +21,54 @@ export async function POST(request: Request) {
     );
   }
 
-  await dbConnect();
   const email = parsed.data.email.toLowerCase();
-  const user = await UserModel.findOne({ email, isActive: true }).lean();
+  const ip = getClientIp(request);
+  const rl = rateLimit({
+    key: `login:${ip}:${email}`,
+    limit: 10,
+    windowMs: 15 * 60 * 1000,
+  });
+  if (!rl.ok) {
+    return NextResponse.json(
+      { success: false, error: "Too many login attempts. Try again later." },
+      { status: 429 },
+    );
+  }
+
+  await dbConnect();
+  let user = await UserModel.findOne({ email, isActive: true }).lean();
   if (!user) {
     return NextResponse.json({ success: false, error: "Invalid credentials." }, { status: 401 });
   }
 
-  const match = await verifyPassword(parsed.data.password, user.passwordHash);
-  if (!match) {
-    return NextResponse.json({ success: false, error: "Invalid credentials." }, { status: 401 });
+  if (!user.workspaceId) {
+    await UserModel.updateOne({ _id: user._id }, { $set: { workspaceId: "default" } });
+    user = await UserModel.findById(user._id).lean();
+    if (!user || !user.workspaceId) {
+      return NextResponse.json({ success: false, error: "Invalid credentials." }, { status: 401 });
+    }
   }
 
+  await UserModel.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date() } });
+
+  const match = await verifyPassword(parsed.data.password, user.passwordHash);
+  if (!match) {
+    // Backward compatibility for legacy seeded/plain password rows.
+    if (user.passwordHash !== parsed.data.password) {
+      return NextResponse.json({ success: false, error: "Invalid credentials." }, { status: 401 });
+    }
+    const migratedHash = await hashPassword(parsed.data.password);
+    await UserModel.updateOne({ _id: user._id }, { $set: { passwordHash: migratedHash } });
+  }
+
+  const normalizedRole = user.role.toLowerCase() === "owner" ? "owner" : "editor";
   const sessionToken = await createSessionToken({
     userId: String(user._id),
-    role: user.role.toLowerCase() === "owner" ? "owner" : "editor",
+    workspaceId: String(user.workspaceId),
+    role: normalizedRole,
     email: user.email,
     name: user.name,
+    tokenVersion: typeof user.tokenVersion === "number" ? user.tokenVersion : 0,
   });
 
   const response = NextResponse.json({
@@ -45,7 +77,7 @@ export async function POST(request: Request) {
       id: user._id,
       name: user.name,
       email: user.email,
-      role: user.role.toLowerCase() === "owner" ? "owner" : "editor",
+      role: normalizedRole,
     },
   });
 
@@ -54,6 +86,9 @@ export async function POST(request: Request) {
     actorRole: user.role,
     actorEmail: user.email,
     action: "auth.login",
+    entityType: "auth",
+    entityId: String(user._id),
+    workspaceId: String(user.workspaceId),
     meta: `Login for ${user.email}`,
   });
 
@@ -63,6 +98,14 @@ export async function POST(request: Request) {
     path: "/",
     secure: process.env.NODE_ENV === "production",
     maxAge: 60 * 60 * 24 * 7,
+  });
+
+  response.cookies.set(await getActiveWorkspaceCookieName(), String(user.workspaceId), {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 60 * 60 * 24 * 30,
   });
 
   return response;

@@ -1,0 +1,15 @@
+
+> vaultflow@0.1.0 dev
+> next dev
+
+ ⚠ Port 3000 is in use, trying 3001 instead.
+  ▲ Next.js 14.2.15
+  - Local:        http://localhost:3001
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 3.1s
+ ○ Compiling /api/auth/signup ...
+ ✓ Compiled /api/auth/signup in 2.4s (221 modules)
+ POST /api/auth/login 200 in 6377ms
+ POST /api/auth/signup 200 in 6440ms

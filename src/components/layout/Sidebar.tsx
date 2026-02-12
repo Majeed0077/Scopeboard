@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutGrid,
   Layers,
@@ -11,7 +11,6 @@ import {
   Receipt,
   CalendarCheck,
   ShieldCheck,
-  Settings,
   UsersRound,
   CreditCard,
   Database,
@@ -22,7 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useLocalData } from "@/lib/localDataStore";
 import { toast } from "sonner";
@@ -34,26 +33,32 @@ const navItems = [
   { href: "/crm", label: "Pipeline", icon: Layers },
   { href: "/contacts", label: "Contacts", icon: Users },
   { href: "/projects", label: "Projects", icon: FolderKanban },
-  { href: "/invoices", label: "Invoices", icon: Receipt },
+  { href: "/settings/workspace", label: "Team", icon: UsersRound },
 ];
 
+const ownerNavItems = [{ href: "/invoices", label: "Invoices", icon: Receipt }];
+
 const ownerItems = [
-  { href: "/audit", label: "Audit Log", icon: ShieldCheck },
-  { href: "/admin/users", label: "Team", icon: UsersRound },
-  { href: "/admin/settings", label: "Admin Settings", icon: Settings },
-  { href: "/admin/billing", label: "Billing", icon: CreditCard },
+  { href: "/audit", label: "Audit Log", icon: ShieldCheck },  { href: "/admin/billing", label: "Billing", icon: CreditCard },
   { href: "/admin/backup", label: "Backup", icon: Database },
 ];
 
 export function Sidebar({ initialRole }: { initialRole?: "owner" | "editor" | null }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [role, setRole] = useState<"owner" | "editor" | null>(initialRole ?? null);
   const isOwner = role === "owner";
+  const visibleNavItems = useMemo(
+    () => (isOwner ? [...navItems, ...ownerNavItems] : navItems),
+    [isOwner],
+  );
+
   const { contacts, projects, milestones, invoices } = useLocalData();
   const [chatUnread, setChatUnread] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
+    if (initialRole) return;
     let mounted = true;
     fetch("/api/auth/me")
       .then((res) => (res.ok ? res.json() : null))
@@ -65,7 +70,7 @@ export function Sidebar({ initialRole }: { initialRole?: "owner" | "editor" | nu
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [initialRole]);
 
   useEffect(() => {
     fetch("/api/chat/unread?entityType=global&entityId=workspace")
@@ -76,6 +81,14 @@ export function Sidebar({ initialRole }: { initialRole?: "owner" | "editor" | nu
       })
       .catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    const routes = [...visibleNavItems, ...(isOwner ? ownerItems : [])].map((item) => item.href);
+    const id = window.setTimeout(() => {
+      routes.forEach((href) => router.prefetch(href));
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [isOwner, router, visibleNavItems]);
 
   useEffect(() => {
     const stored = window.localStorage.getItem("vaultflow-sidebar-collapsed");
@@ -112,6 +125,7 @@ export function Sidebar({ initialRole }: { initialRole?: "owner" | "editor" | nu
           </div>
         </div>
       </div>
+
       <Button
         variant="ghost"
         size="icon"
@@ -125,13 +139,14 @@ export function Sidebar({ initialRole }: { initialRole?: "owner" | "editor" | nu
       </Button>
 
       <nav className={cn("mt-8 flex flex-1 flex-col gap-1", collapsed && "items-center")}>
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
           return (
             <Link
               key={item.href}
               href={item.href}
+              prefetch
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
                 active && "bg-muted text-foreground",
@@ -140,12 +155,11 @@ export function Sidebar({ initialRole }: { initialRole?: "owner" | "editor" | nu
             >
               <Icon className="h-4 w-4" />
               {!collapsed ? <span className="flex-1">{item.label}</span> : null}
-              {item.href === "/chat" && chatUnread > 0 ? (
-                <Badge variant="secondary">{chatUnread}</Badge>
-              ) : null}
+              {item.href === "/chat" && chatUnread > 0 ? <Badge variant="secondary">{chatUnread}</Badge> : null}
             </Link>
           );
         })}
+
         {isOwner &&
           ownerItems.map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -154,6 +168,7 @@ export function Sidebar({ initialRole }: { initialRole?: "owner" | "editor" | nu
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
                   active && "bg-muted text-foreground",
@@ -166,7 +181,6 @@ export function Sidebar({ initialRole }: { initialRole?: "owner" | "editor" | nu
             );
           })}
       </nav>
-
 
       {isOwner && !collapsed && (
         <div className="mt-4 space-y-2">
@@ -187,6 +201,7 @@ export function Sidebar({ initialRole }: { initialRole?: "owner" | "editor" | nu
             <Download className="h-4 w-4" />
             Export data
           </Button>
+
           <label className="flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted/60 cursor-pointer">
             <Upload className="h-4 w-4" />
             Import data
@@ -200,7 +215,7 @@ export function Sidebar({ initialRole }: { initialRole?: "owner" | "editor" | nu
                 const reader = new FileReader();
                 reader.onload = () => {
                   try {
-                    const parsed = JSON.parse(reader.result as string);
+                    JSON.parse(reader.result as string);
                     toast.message("Import is not available in live mode.");
                   } catch {
                     toast.error("Invalid data file.");
@@ -215,3 +230,4 @@ export function Sidebar({ initialRole }: { initialRole?: "owner" | "editor" | nu
     </aside>
   );
 }
+

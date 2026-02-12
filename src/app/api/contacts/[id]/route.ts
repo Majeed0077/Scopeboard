@@ -11,33 +11,31 @@ function serialize(doc: any) {
   return { id: _id, ...rest };
 }
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } },
-) {
-  try {
-    await requireSession(req);
-  } catch {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-  }
-  await dbConnect();
-  const contact = await ContactModel.findById(params.id);
-  if (!contact) {
-    return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
-  }
-  return NextResponse.json({ success: true, data: serialize(contact) });
-}
-
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } },
-) {
+export async function GET(req: Request, { params }: { params: { id: string } }) {
   let session;
   try {
     session = await requireSession(req);
   } catch {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
+
+  await dbConnect();
+  const contact = await ContactModel.findOne({ _id: params.id, workspaceId: session.workspaceId });
+  if (!contact) {
+    return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({ success: true, data: serialize(contact) });
+}
+
+export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+  let session;
+  try {
+    session = await requireSession(req);
+  } catch {
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+
   await dbConnect();
   const body = await req.json();
   const parsed = contactUpdateSchema.safeParse(body);
@@ -47,11 +45,18 @@ export async function PATCH(
       { status: 400 },
     );
   }
-  const updated = await ContactModel.findByIdAndUpdate(params.id, parsed.data, { new: true });
+
+  const updated = await ContactModel.findOneAndUpdate(
+    { _id: params.id, workspaceId: session.workspaceId },
+    parsed.data,
+    { new: true },
+  );
   if (!updated) {
     return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
   }
+
   await logAuditEvent({
+    workspaceId: session.workspaceId,
     actorId: session.userId,
     actorRole: session.role,
     actorEmail: session.email,
@@ -59,29 +64,33 @@ export async function PATCH(
     entityType: "contact",
     entityId: params.id,
   });
+
   return NextResponse.json({ success: true, data: serialize(updated) });
 }
 
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } },
-) {
+export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+  let session;
   try {
-    await requireRole(req, "Owner");
+    session = await requireRole(req, "Owner");
   } catch {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
+
   await dbConnect();
-  const deleted = await ContactModel.findByIdAndDelete(params.id);
+  const deleted = await ContactModel.findOneAndDelete({ _id: params.id, workspaceId: session.workspaceId });
   if (!deleted) {
     return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
   }
+
   await logAuditEvent({
-    actorId: "system",
-    actorRole: "owner",
+    workspaceId: session.workspaceId,
+    actorId: session.userId,
+    actorRole: session.role,
+    actorEmail: session.email,
     action: "contacts.delete",
     entityType: "contact",
     entityId: params.id,
   });
+
   return NextResponse.json({ success: true, data: { id: params.id } });
 }

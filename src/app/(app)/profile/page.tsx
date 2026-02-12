@@ -10,7 +10,10 @@ export default async function ProfilePage() {
         email: user.email,
         role: user.role === "owner" ? "owner" : "editor",
         avatarUrl: user.avatarUrl ?? "",
+        timezone: user.timezone ?? "UTC",
+        language: user.language ?? "en",
       }
     : null;
+
   return <ProfileClient initialProfile={initialProfile} />;
 }

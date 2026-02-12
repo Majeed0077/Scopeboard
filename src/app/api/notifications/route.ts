@@ -17,7 +17,12 @@ export async function GET(req: Request) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
   await dbConnect();
-  const items = await NotificationModel.find().sort({ createdAt: -1 }).limit(20).lean();
+
+  const items = await NotificationModel.find({ workspaceId: session.workspaceId })
+    .sort({ createdAt: -1 })
+    .limit(20)
+    .lean();
+
   const data = items.map((item) => ({ id: item._id, ...item }));
   const unread = data.filter((item) => !(item.readBy ?? []).includes(session.userId)).length;
   return NextResponse.json({ success: true, data: { items: data, unread } });
@@ -30,14 +35,17 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
+
   const body = await req.json();
   if (!body?.title || !body?.body || !body?.type) {
     return NextResponse.json({ success: false, error: "Invalid payload" }, { status: 400 });
   }
+
   await dbConnect();
   const id = `ntf-${crypto.randomUUID().slice(0, 8)}`;
   const created = await NotificationModel.create({
     _id: id,
+    workspaceId: session.workspaceId,
     title: String(body.title),
     body: String(body.body),
     type: String(body.type),
@@ -46,5 +54,6 @@ export async function POST(req: Request) {
     createdAt: new Date().toISOString(),
     readBy: [],
   });
+
   return NextResponse.json({ success: true, data: serialize(created) });
 }

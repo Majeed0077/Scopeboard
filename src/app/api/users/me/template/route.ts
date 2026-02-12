@@ -11,7 +11,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
   await dbConnect();
-  const user = await UserModel.findById(session.userId).lean();
+  const user = await UserModel.findOne({ _id: session.userId, workspaceId: session.workspaceId }).lean();
   if (!user) {
     return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
   }
@@ -35,8 +35,8 @@ export async function PUT(req: Request) {
     return NextResponse.json({ success: false, error: "Invalid template" }, { status: 400 });
   }
   await dbConnect();
-  const updated = await UserModel.findByIdAndUpdate(
-    session.userId,
+  const updated = await UserModel.findOneAndUpdate(
+    { _id: session.userId, workspaceId: session.workspaceId },
     { invoiceEmailTemplate: body.template },
     { new: true },
   ).lean();

@@ -22,18 +22,24 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
+
   const body = await req.json();
   if (!body || typeof body !== "object") {
     return NextResponse.json({ success: false, error: "Invalid payload" }, { status: 400 });
   }
+
+  if (body.workspaceId && body.workspaceId !== session.workspaceId) {
+    return NextResponse.json({ success: false, error: "Workspace mismatch" }, { status: 403 });
+  }
+
   await dbConnect();
 
   const bulkUpsert = async (Model: any, docs: any[]) => {
     if (!Array.isArray(docs) || docs.length === 0) return;
     const operations = docs.map((doc) => ({
       updateOne: {
-        filter: { _id: doc._id },
-        update: doc,
+        filter: { _id: doc._id, workspaceId: session.workspaceId },
+        update: { ...doc, workspaceId: session.workspaceId },
         upsert: true,
       },
     }));
@@ -52,6 +58,7 @@ export async function POST(req: Request) {
 
   await AuditModel.create({
     _id: `aud-${crypto.randomUUID().slice(0, 8)}`,
+    workspaceId: session.workspaceId,
     createdAt: new Date().toISOString(),
     actorId: session.userId,
     actorRole: session.role,

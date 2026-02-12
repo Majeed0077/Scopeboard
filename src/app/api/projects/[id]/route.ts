@@ -27,21 +27,20 @@ function serialize(doc: any) {
   return { id: _id, ...rest, links: normalizedLinks, attachments: normalizedAttachments };
 }
 
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } },
-) {
+export async function GET(req: Request, { params }: { params: { id: string } }) {
   let session;
   try {
     session = await requireSession(req);
   } catch {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
+
   await dbConnect();
-  const project = await ProjectModel.findById(params.id);
+  const project = await ProjectModel.findOne({ _id: params.id, workspaceId: session.workspaceId });
   if (!project) {
     return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
   }
+
   const serialized = serialize(project);
   return NextResponse.json({
     success: true,
@@ -49,16 +48,14 @@ export async function GET(
   });
 }
 
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } },
-) {
+export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   let session;
   try {
     session = await requireSession(req);
   } catch {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
+
   await dbConnect();
   const body = await req.json();
   const parsed = projectUpdateWithRemovalsSchema.safeParse(body);
@@ -68,6 +65,7 @@ export async function PATCH(
       { status: 400 },
     );
   }
+
   try {
     assertCanWriteProjectFinanceFields(parsed.data, session.role);
   } catch (error) {
@@ -76,10 +74,9 @@ export async function PATCH(
       { status: 400 },
     );
   }
+
   const { removeAttachmentUrls, ...rest } = parsed.data;
-  const basePayload = rest.contactId
-    ? { ...rest, clientName: undefined }
-    : rest;
+  const basePayload = rest.contactId ? { ...rest, clientName: undefined } : rest;
   let update: Record<string, unknown>;
   if (removeAttachmentUrls && removeAttachmentUrls.length > 0) {
     update = {
@@ -89,10 +86,16 @@ export async function PATCH(
   } else {
     update = basePayload;
   }
-  const updated = await ProjectModel.findByIdAndUpdate(params.id, update, { new: true });
+
+  const updated = await ProjectModel.findOneAndUpdate(
+    { _id: params.id, workspaceId: session.workspaceId },
+    update,
+    { new: true },
+  );
   if (!updated) {
     return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
   }
+
   const serialized = serialize(updated);
   return NextResponse.json({
     success: true,
@@ -100,19 +103,19 @@ export async function PATCH(
   });
 }
 
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } },
-) {
+export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+  let session;
   try {
-    await requireRole(req, "Owner");
+    session = await requireRole(req, "Owner");
   } catch {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
+
   await dbConnect();
-  const deleted = await ProjectModel.findByIdAndDelete(params.id);
+  const deleted = await ProjectModel.findOneAndDelete({ _id: params.id, workspaceId: session.workspaceId });
   if (!deleted) {
     return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
   }
+
   return NextResponse.json({ success: true, data: { id: params.id } });
 }

@@ -8,16 +8,19 @@ import { adminSettingsSchema } from "@/lib/validation";
 const SETTINGS_ID = "settings";
 
 export async function GET(req: Request) {
+  let session;
   try {
-    await requireSession(req);
+    session = await requireSession(req);
   } catch {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
+
   await dbConnect();
-  const existing = await SettingsModel.findById(SETTINGS_ID).lean();
+  const existing = await SettingsModel.findOne({ _id: SETTINGS_ID, workspaceId: session.workspaceId }).lean();
   if (!existing) {
     const created = await SettingsModel.create({
       _id: SETTINGS_ID,
+      workspaceId: session.workspaceId,
       orgName: "Flowlane",
       timezone: "UTC",
       logoUrl: "",
@@ -33,6 +36,7 @@ export async function GET(req: Request) {
       },
     });
   }
+
   return NextResponse.json({
     success: true,
     data: {
@@ -54,6 +58,7 @@ export async function PUT(req: Request) {
   } catch {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
+
   const body = await req.json();
   const parsed = adminSettingsSchema.safeParse(body);
   if (!parsed.success) {
@@ -62,14 +67,17 @@ export async function PUT(req: Request) {
       { status: 400 },
     );
   }
+
   await dbConnect();
-  const updated = await SettingsModel.findByIdAndUpdate(
-    SETTINGS_ID,
-    { ...parsed.data, updatedAt: new Date().toISOString() },
+  const updated = await SettingsModel.findOneAndUpdate(
+    { _id: SETTINGS_ID, workspaceId: session.workspaceId },
+    { ...parsed.data, workspaceId: session.workspaceId, updatedAt: new Date().toISOString() },
     { upsert: true, new: true },
   ).lean();
+
   await AuditModel.create({
     _id: `aud-${crypto.randomUUID().slice(0, 8)}`,
+    workspaceId: session.workspaceId,
     createdAt: new Date().toISOString(),
     actorId: session.userId,
     actorRole: session.role,
@@ -78,6 +86,7 @@ export async function PUT(req: Request) {
     entityType: "settings",
     entityId: SETTINGS_ID,
   });
+
   return NextResponse.json({
     success: true,
     data: {

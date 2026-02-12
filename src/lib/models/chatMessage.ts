@@ -3,6 +3,7 @@ import mongoose, { Schema } from "mongoose";
 const ChatMessageSchema = new Schema(
   {
     _id: { type: String, required: true },
+    workspaceId: { type: String, required: true, index: true, default: "default" },
     entityType: { type: String, enum: ["contact", "project", "global"], required: true },
     entityId: { type: String, required: true },
     body: { type: String, required: true },
@@ -22,3 +23,9 @@ if (mongoose.models.ChatMessage) {
 
 export const ChatMessageModel =
   mongoose.models.ChatMessage || mongoose.model("ChatMessage", ChatMessageSchema);
+
+
+
+
+
+

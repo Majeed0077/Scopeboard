@@ -14,6 +14,7 @@ const AttachmentSchema = new Schema(
 const ProjectSchema = new Schema(
   {
     _id: { type: String, required: true },
+    workspaceId: { type: String, required: true, index: true, default: "default" },
     contactId: { type: String, required: false, default: undefined },
     clientName: { type: String },
     title: { type: String, required: true },
@@ -34,6 +35,11 @@ const ProjectSchema = new Schema(
   },
   { timestamps: true },
 );
+
+ProjectSchema.index({ workspaceId: 1, status: 1, archived: 1 });
+ProjectSchema.index({ workspaceId: 1, contactId: 1 });
+ProjectSchema.index({ workspaceId: 1, dueDate: 1 });
+ProjectSchema.index({ workspaceId: 1, updatedAt: -1 });
 
 if (mongoose.models.Project) {
   mongoose.deleteModel("Project");

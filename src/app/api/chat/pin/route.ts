@@ -13,22 +13,27 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
+
   const body = await req.json();
   if (!body?.messageId || !body?.entityType || !body?.entityId) {
     return NextResponse.json({ success: false, error: "Invalid payload" }, { status: 400 });
   }
+
   await dbConnect();
   await ChatMessageModel.updateMany(
-    { entityType: body.entityType, entityId: body.entityId },
+    { workspaceId: session.workspaceId, entityType: body.entityType, entityId: body.entityId },
     { $unset: { pinnedAt: "" } },
   );
-  const updated = await ChatMessageModel.findByIdAndUpdate(
-    body.messageId,
+
+  const updated = await ChatMessageModel.findOneAndUpdate(
+    { _id: body.messageId, workspaceId: session.workspaceId },
     { pinnedAt: new Date().toISOString() },
     { new: true },
   ).lean();
+
   if (!updated) {
     return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
   }
+
   return NextResponse.json({ success: true, data: { id: updated._id, pinnedAt: updated.pinnedAt } });
 }

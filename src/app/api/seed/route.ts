@@ -10,23 +10,32 @@ import { projects } from "@/data/projects";
 import { invoices } from "@/data/invoices";
 
 export async function POST(req: Request) {
+  let session;
   try {
-    await requireRole(req, "Owner");
+    session = await requireRole(req, "Owner");
   } catch {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 
   await dbConnect();
+  const scope = { workspaceId: session.workspaceId };
+
   await Promise.all([
-    ContactModel.deleteMany({}),
-    ProjectModel.deleteMany({}),
-    InvoiceModel.deleteMany({}),
-    ActivityModel.deleteMany({}),
+    ContactModel.deleteMany(scope),
+    ProjectModel.deleteMany(scope),
+    InvoiceModel.deleteMany(scope),
+    ActivityModel.deleteMany(scope),
   ]);
 
-  await ContactModel.insertMany(contacts.map((item) => ({ _id: item.id, ...item })));
-  await ProjectModel.insertMany(projects.map((item) => ({ _id: item.id, ...item })));
-  await InvoiceModel.insertMany(invoices.map((item) => ({ _id: item.id, ...item })));
+  await ContactModel.insertMany(
+    contacts.map((item) => ({ _id: item.id, ...item, workspaceId: session.workspaceId })),
+  );
+  await ProjectModel.insertMany(
+    projects.map((item) => ({ _id: item.id, ...item, workspaceId: session.workspaceId })),
+  );
+  await InvoiceModel.insertMany(
+    invoices.map((item) => ({ _id: item.id, ...item, workspaceId: session.workspaceId })),
+  );
 
   return NextResponse.json({ success: true, data: { seeded: true } });
 }
