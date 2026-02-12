@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import { useState } from "react";
@@ -21,8 +21,8 @@ function getLandingPath(session?: AuthSession | null) {
 export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const inviteToken = searchParams.get("invite") ?? "";
-  const inviteEmail = searchParams.get("email") ?? "";
+  const inviteToken = searchParams?.get("invite") ?? "";
+  const inviteEmail = searchParams?.get("email") ?? "";
 
   const [email, setEmail] = useState(inviteEmail);
   const [password, setPassword] = useState("");
@@ -174,3 +174,4 @@ export default function SignInPage() {
     </div>
   );
 }
+

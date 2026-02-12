@@ -1,66 +1,81 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+﻿import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   CalendarCheck,
   Layers,
   Users,
   Zap,
   ShieldCheck,
-  Feather,
+  Handshake,
 } from "lucide-react";
 
 const features = [
   {
-    title: "Today-first workflow",
-    description: "Start each day with a prioritized list of follow-ups and milestones.",
+    title: "Today execution lane",
+    description: "See what must move today across leads, milestones, and invoices.",
     icon: CalendarCheck,
+    outcome: "No blind spots",
   },
   {
-    title: "Pipeline clarity",
-    description: "Move leads across stages with full context and next actions.",
+    title: "Pipeline to delivery",
+    description: "Move from lead stage to active project without context switching.",
     icon: Layers,
+    outcome: "Faster handoff",
   },
   {
-    title: "Client continuity",
-    description: "Keep contacts, projects, notes, and invoices in one thread.",
+    title: "Client memory",
+    description: "Contacts, notes, files, and invoices stay linked for every account.",
     icon: Users,
+    outcome: "Zero context loss",
   },
   {
-    title: "Fast capture",
-    description: "Quick Add enforces next follow-up so nothing slips.",
+    title: "Quick Add capture",
+    description: "Add leads instantly with required follow-up so nothing slips.",
     icon: Zap,
+    outcome: "More follow-through",
   },
   {
-    title: "Owner-only finance",
-    description: "Sensitive totals and payments are protected by role.",
+    title: "Permission-safe finance",
+    description: "Owner-only totals, guarded actions, and role-aware visibility.",
     icon: ShieldCheck,
+    outcome: "Safer ops",
   },
   {
-    title: "Lightweight by design",
-    description: "No clutter, just the essentials for agency execution.",
-    icon: Feather,
+    title: "Team collaboration",
+    description: "Shared workspaces with clear roles, invites, and activity history.",
+    icon: Handshake,
+    outcome: "Aligned team",
   },
 ];
 
 export function Features() {
   return (
-    <section id="services" className="mx-auto w-full max-w-6xl px-6 py-12">
-      <div className="flex items-center justify-between gap-6">
-        <h2 className="text-2xl font-semibold">Services & features</h2>
-        <span className="text-sm text-muted-foreground">Built for daily execution</span>
+    <section id="services" className="mx-auto w-full max-w-6xl px-6 py-12 md:py-16">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Why teams switch</p>
+          <h2 className="mt-2 text-3xl font-semibold md:text-4xl">Built for operators, not demo screenshots.</h2>
+        </div>
+        <p className="max-w-md text-sm text-muted-foreground">
+          Every block is tuned for agency delivery speed, team accountability, and calmer day to day execution.
+        </p>
       </div>
-      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+
+      <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {features.map((feature) => {
           const Icon = feature.icon;
           return (
-            <Card key={feature.title} className="glass">
+            <Card key={feature.title} className="group border bg-card/70 transition hover:-translate-y-0.5 hover:shadow-lg">
               <CardHeader className="space-y-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border bg-background/80">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl border bg-background/70">
                   <Icon className="h-5 w-5" />
                 </div>
                 <CardTitle className="text-base">{feature.title}</CardTitle>
               </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                {feature.description}
+              <CardContent>
+                <p className="text-sm text-muted-foreground">{feature.description}</p>
+                <p className="mt-4 text-xs font-semibold uppercase tracking-[0.12em] text-cyan-600 dark:text-cyan-400">
+                  {feature.outcome}
+                </p>
               </CardContent>
             </Card>
           );
@@ -69,3 +84,4 @@ export function Features() {
     </section>
   );
 }
+

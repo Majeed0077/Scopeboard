@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
@@ -11,8 +11,8 @@ import { parseISO, isSameMonth } from "date-fns";
 
 export default function InvoicesPage() {
   const searchParams = useSearchParams();
-  const statusParam = searchParams.get("status");
-  const filterParam = searchParams.get("filter") ?? undefined;
+  const statusParam = searchParams?.get("status");
+  const filterParam = searchParams?.get("filter") ?? undefined;
   const initialStatus =
     statusParam === "unpaid" || statusParam === "overdue" || statusParam === "paid"
       ? (statusParam as "unpaid" | "overdue" | "paid")
@@ -80,3 +80,4 @@ export default function InvoicesPage() {
     </div>
   );
 }
+

@@ -1,11 +1,11 @@
-"use client";
+﻿"use client";
 
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { ProjectDetail } from "@/components/projects/ProjectDetail";
 import { Breadcrumbs } from "@/components/common/Breadcrumbs";
 import { useLocalData } from "@/lib/localDataStore";
 import { useRole } from "@/lib/useRole";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export default function ProjectPage() {
@@ -13,7 +13,8 @@ export default function ProjectPage() {
   const { projects, milestones } = useLocalData();
   const role = useRole();
   const isOwner = role === "owner";
-  const project = projects.find((item) => item.id === params.id);
+  const projectId = params?.id ?? "";
+  const project = projects.find((item) => item.id === projectId);
 
   if (!project) {
     return (

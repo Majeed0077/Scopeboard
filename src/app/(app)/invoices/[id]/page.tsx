@@ -1,21 +1,22 @@
-"use client";
+﻿"use client";
 
 import { useParams, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { InvoiceDetail } from "@/components/invoices/InvoiceDetail";
 import { Breadcrumbs } from "@/components/common/Breadcrumbs";
 import { useLocalData } from "@/lib/localDataStore";
 import { useRole } from "@/lib/useRole";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export default function InvoicePage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
-  const autoExport = searchParams.get("export") === "pdf";
+  const autoExport = searchParams?.get("export") === "pdf";
   const { invoices, contacts, projects } = useLocalData();
   const role = useRole();
   const isOwner = role === "owner";
-  const invoice = invoices.find((item) => item.id === params.id);
+  const invoiceId = params?.id ?? "";
+  const invoice = invoices.find((item) => item.id === invoiceId);
 
   if (!invoice) {
     return (

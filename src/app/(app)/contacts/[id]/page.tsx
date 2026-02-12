@@ -1,16 +1,17 @@
-"use client";
+﻿"use client";
 
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { ContactDetail } from "@/components/contacts/ContactDetail";
 import { Breadcrumbs } from "@/components/common/Breadcrumbs";
 import { useLocalData } from "@/lib/localDataStore";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export default function ContactPage() {
   const params = useParams<{ id: string }>();
   const { contacts, projects, invoices } = useLocalData();
-  const contact = contacts.find((item) => item.id === params.id);
+  const contactId = params?.id ?? "";
+  const contact = contacts.find((item) => item.id === contactId);
 
   if (!contact) {
     return (
@@ -37,11 +38,7 @@ export default function ContactPage() {
           { label: contact.name },
         ]}
       />
-      <ContactDetail
-        contact={contact}
-        projects={contactProjects}
-        invoices={contactInvoices}
-      />
+      <ContactDetail contact={contact} projects={contactProjects} invoices={contactInvoices} />
     </div>
   );
 }

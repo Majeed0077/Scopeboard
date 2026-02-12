@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import Image from "next/image";
@@ -42,6 +42,7 @@ const ownerItems = [
 
 export function Sidebar({ initialRole }: { initialRole?: "owner" | "editor" | null }) {
   const pathname = usePathname();
+  const safePathname = pathname ?? "";
   const router = useRouter();
   const [role, setRole] = useState<"owner" | "editor" | null>(initialRole ?? null);
   const isOwner = role === "owner";
@@ -158,7 +159,7 @@ export function Sidebar({ initialRole }: { initialRole?: "owner" | "editor" | nu
 
       <nav className={cn("mt-8 flex flex-1 flex-col gap-1", collapsed && "items-center")}>
         {visibleNavItems.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const active = safePathname === item.href || safePathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
           return (
             <Link
@@ -180,7 +181,7 @@ export function Sidebar({ initialRole }: { initialRole?: "owner" | "editor" | nu
 
         {isOwner &&
           ownerItems.map((item) => {
-            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const active = safePathname === item.href || safePathname.startsWith(`${item.href}/`);
             const Icon = item.icon;
             return (
               <Link
@@ -248,6 +249,8 @@ export function Sidebar({ initialRole }: { initialRole?: "owner" | "editor" | nu
     </aside>
   );
 }
+
+
 
 
 

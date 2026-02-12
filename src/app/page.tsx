@@ -1,4 +1,4 @@
-import { LandingHeader } from "@/components/landing/LandingHeader";
+﻿import { LandingHeader } from "@/components/landing/LandingHeader";
 import { Hero } from "@/components/landing/Hero";
 import { Features } from "@/components/landing/Features";
 import { About } from "@/components/landing/About";
@@ -17,3 +17,4 @@ export default function Home() {
     </div>
   );
 }
+
