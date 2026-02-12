@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { dbConnect } from "@/lib/db";
 import { UserModel } from "@/lib/models/user";
+import { TeamInviteModel } from "@/lib/models/teamInvite";
+import { WorkspaceMembershipModel } from "@/lib/models/workspaceMembership";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { createSessionToken, getActiveWorkspaceCookieName, getSessionCookieName } from "@/lib/auth";
 import { logAuditEvent } from "@/lib/audit";
@@ -12,6 +14,7 @@ export async function POST(request: Request) {
   const schema = z.object({
     email: z.string().email(),
     password: z.string().min(1),
+    inviteToken: z.string().optional(),
   });
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
@@ -60,6 +63,45 @@ export async function POST(request: Request) {
     await UserModel.updateOne({ _id: user._id }, { $set: { passwordHash: migratedHash } });
   }
 
+  let activeWorkspaceId = String(user.workspaceId);
+  if (parsed.data.inviteToken) {
+    const invite = await TeamInviteModel.findOne({ token: parsed.data.inviteToken }).lean();
+    if (!invite) {
+      return NextResponse.json({ success: false, error: "Invalid invite link." }, { status: 400 });
+    }
+    if (invite.email !== email) {
+      return NextResponse.json({ success: false, error: "Invite email does not match." }, { status: 400 });
+    }
+    if (invite.status !== "pending") {
+      return NextResponse.json({ success: false, error: "Invite is no longer active." }, { status: 400 });
+    }
+    if (new Date(invite.expiresAt).getTime() < Date.now()) {
+      await TeamInviteModel.findByIdAndUpdate(invite._id, { status: "expired" });
+      return NextResponse.json({ success: false, error: "Invite has expired." }, { status: 400 });
+    }
+
+    const targetRole = invite.role === "Owner" ? "owner" : "editor";
+    await WorkspaceMembershipModel.updateOne(
+      { userId: String(user._id), workspaceId: invite.workspaceId },
+      {
+        $set: {
+          role: targetRole,
+          isActive: true,
+          invitedById: invite.invitedById,
+        },
+      },
+      { upsert: true },
+    );
+
+    await TeamInviteModel.findByIdAndUpdate(invite._id, {
+      status: "accepted",
+      acceptedAt: new Date(),
+      acceptedUserId: String(user._id),
+    });
+
+    activeWorkspaceId = String(invite.workspaceId);
+  }
+
   const normalizedRole = user.role.toLowerCase() === "owner" ? "owner" : "editor";
   const defaultLandingPage = user.defaultLandingPage === "dashboard" ? "dashboard" : "today";
 
@@ -81,6 +123,7 @@ export async function POST(request: Request) {
       email: user.email,
       role: normalizedRole,
       defaultLandingPage,
+      activeWorkspaceId,
     },
   });
 
@@ -88,10 +131,10 @@ export async function POST(request: Request) {
     actorId: String(user._id),
     actorRole: user.role,
     actorEmail: user.email,
-    action: "auth.login",
+    action: parsed.data.inviteToken ? "auth.login.invite-accepted" : "auth.login",
     entityType: "auth",
     entityId: String(user._id),
-    workspaceId: String(user.workspaceId),
+    workspaceId: activeWorkspaceId,
     meta: `Login for ${user.email}`,
   });
 
@@ -103,7 +146,7 @@ export async function POST(request: Request) {
     maxAge: 60 * 60 * 24 * 7,
   });
 
-  response.cookies.set(await getActiveWorkspaceCookieName(), String(user.workspaceId), {
+  response.cookies.set(await getActiveWorkspaceCookieName(), activeWorkspaceId, {
     httpOnly: true,
     sameSite: "lax",
     path: "/",

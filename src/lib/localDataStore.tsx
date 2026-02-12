@@ -27,9 +27,22 @@ export function LocalDataProvider({ children }: { children: React.ReactNode }) {
   const [projects, setProjects] = React.useState<Project[]>([]);
   const [milestones, setMilestones] = React.useState<Milestone[]>([]);
   const [invoices, setInvoices] = React.useState<Invoice[]>([]);
+  const [workspaceRefreshKey, setWorkspaceRefreshKey] = React.useState(0);
+
+  React.useEffect(() => {
+    function onWorkspaceUpdated() {
+      setWorkspaceRefreshKey((prev) => prev + 1);
+    }
+
+    window.addEventListener("scopeboard-workspace-updated", onWorkspaceUpdated as EventListener);
+    return () => {
+      window.removeEventListener("scopeboard-workspace-updated", onWorkspaceUpdated as EventListener);
+    };
+  }, []);
 
   React.useEffect(() => {
     let active = true;
+
     async function load() {
       try {
         const [contactsData, projectsData, invoicesData, milestonesData] = await Promise.all([
@@ -51,11 +64,12 @@ export function LocalDataProvider({ children }: { children: React.ReactNode }) {
         setMilestones([]);
       }
     }
+
     load();
     return () => {
       active = false;
     };
-  }, [role]);
+  }, [role, workspaceRefreshKey]);
 
   return (
     <LocalDataContext.Provider

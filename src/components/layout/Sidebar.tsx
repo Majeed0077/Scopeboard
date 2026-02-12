@@ -111,14 +111,35 @@ export function Sidebar({ initialRole }: { initialRole?: "owner" | "editor" | nu
               collapsed ? "h-10 w-10 justify-center" : "h-12 w-[200px]",
             )}
           >
-            <Image
-              src={collapsed ? "/icon a.png" : "/Logo.png"}
-              alt="ScopeBoard"
-              width={collapsed ? 32 : 200}
-              height={collapsed ? 32 : 48}
-              className={cn("object-contain", collapsed ? "h-8 w-8" : "h-10 w-auto")}
-              priority
-            />
+            {collapsed ? (
+              <Image
+                src="/icon a.png"
+                alt="ScopeBoard"
+                width={32}
+                height={32}
+                className="h-8 w-8 object-contain"
+                priority
+              />
+            ) : (
+              <>
+                <Image
+                  src="/Logo Black.png"
+                  alt="ScopeBoard"
+                  width={200}
+                  height={48}
+                  className="h-10 w-auto object-contain dark:hidden"
+                  priority
+                />
+                <Image
+                  src="/Logo.png"
+                  alt="ScopeBoard"
+                  width={200}
+                  height={48}
+                  className="hidden h-10 w-auto object-contain dark:block"
+                  priority
+                />
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -227,4 +248,5 @@ export function Sidebar({ initialRole }: { initialRole?: "owner" | "editor" | nu
     </aside>
   );
 }
+
 

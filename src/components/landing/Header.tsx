@@ -9,11 +9,19 @@ export function LandingHeader() {
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
         <div className="flex items-center">
           <Image
+            src="/Logo Black.png"
+            alt="ScopeBoard"
+            width={140}
+            height={36}
+            className="h-9 w-auto object-contain dark:hidden"
+            priority
+          />
+          <Image
             src="/Logo.png"
             alt="ScopeBoard"
             width={140}
             height={36}
-            className="h-9 w-auto object-contain"
+            className="hidden h-9 w-auto object-contain dark:block"
             priority
           />
         </div>
@@ -35,3 +43,4 @@ export function LandingHeader() {
     </header>
   );
 }
+

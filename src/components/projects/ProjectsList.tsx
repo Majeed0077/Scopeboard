@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { GripVertical, MoreHorizontal } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import type { Project, ProjectStatus } from "@/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProjectStatusBadge } from "@/components/common/StatusBadge";
@@ -79,19 +79,29 @@ export function ProjectsList({
       toast.error("Only the owner can do this.");
       return;
     }
+
     const newStatus = over.id as ProjectStatus;
     const projectId = active.id as string;
     const current = projects.find((project) => project.id === projectId);
     if (!current || current.status === newStatus) return;
+
+    const previousStatus = current.status;
+
+    // Optimistic UI update for instant drag-drop feedback.
+    setProjects((prev) =>
+      prev.map((project) =>
+        project.id === projectId ? { ...project, status: newStatus } : project,
+      ),
+    );
+
     try {
       await api.updateProject(projectId, { status: newStatus });
+    } catch {
       setProjects((prev) =>
         prev.map((project) =>
-          project.id === projectId ? { ...project, status: newStatus } : project,
+          project.id === projectId ? { ...project, status: previousStatus } : project,
         ),
       );
-      toast.success("Project status updated.");
-    } catch {
       toast.error("Unable to update project.");
     }
   }
@@ -271,8 +281,10 @@ function ProjectCard({
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: project.id,
   });
+  const dragProps = canMove ? { ...listeners, ...attributes } : {};
 
   function handleCardClick(event: React.MouseEvent<HTMLDivElement>) {
+    if (isDragging) return;
     const target = event.target as HTMLElement;
     if (target.closest("[data-project-menu]")) return;
     router.push(`/projects/${project.id}`);
@@ -288,6 +300,7 @@ function ProjectCard({
         isDragging && "opacity-60",
       )}
       onClick={handleCardClick}
+      {...dragProps}
     >
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-2">
@@ -299,20 +312,8 @@ function ProjectCard({
           </div>
           <div className="flex items-center gap-1" data-project-menu onPointerDown={(event) => event.stopPropagation()}>
             <ProjectStatusBadge status={project.status} />
-            {canMove ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 cursor-grab"
-                data-project-menu
-                onPointerDown={(event) => event.stopPropagation()}
-                onClick={(event) => event.stopPropagation()}
-                {...listeners}
-                {...attributes}
-              >
-                <GripVertical className="h-4 w-4" />
-              </Button>
-            ) : null}
+
+
             {canDelete ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -351,6 +352,12 @@ function ProjectCard({
     </Card>
   );
 }
+
+
+
+
+
+
 
 
 

@@ -1,9 +1,8 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,7 +20,11 @@ function getLandingPath(session?: AuthSession | null) {
 
 export default function SignInPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const searchParams = useSearchParams();
+  const inviteToken = searchParams.get("invite") ?? "";
+  const inviteEmail = searchParams.get("email") ?? "";
+
+  const [email, setEmail] = useState(inviteEmail);
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [existingSession, setExistingSession] = useState<AuthSession | null>(null);
@@ -37,13 +40,19 @@ export default function SignInPage() {
       .catch(() => undefined);
   }, []);
 
+  React.useEffect(() => {
+    if (inviteEmail) {
+      setEmail(inviteEmail);
+    }
+  }, [inviteEmail]);
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setLoading(true);
     const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, inviteToken: inviteToken || undefined }),
     });
     const payload = await response.json().catch(() => null);
     setLoading(false);
@@ -53,8 +62,8 @@ export default function SignInPage() {
       return;
     }
 
-    const me = await fetch("/api/auth/me").then((res) => res.json()).catch(() => null);
-    router.push(getLandingPath(me?.data));
+    router.replace(getLandingPath(payload?.data));
+    router.refresh();
   }
 
   return (
@@ -98,7 +107,9 @@ export default function SignInPage() {
                 </p>
                 <h2 className="text-2xl font-semibold">Welcome back</h2>
                 <p className="text-sm text-muted-foreground">
-                  Use your ScopeBoard account to continue.
+                  {inviteToken
+                    ? "Sign in to accept your team invite."
+                    : "Use your ScopeBoard account to continue."}
                 </p>
               </div>
             </div>
@@ -112,6 +123,7 @@ export default function SignInPage() {
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   required
+                  disabled={Boolean(inviteEmail)}
                 />
               </div>
               <div className="space-y-2">
@@ -142,7 +154,17 @@ export default function SignInPage() {
             ) : null}
             <div className="text-xs text-muted-foreground">
               New here?{" "}
-              <Button variant="ghost" className="px-1 text-xs" onClick={() => router.push("/signup")}>
+              <Button
+                variant="ghost"
+                className="px-1 text-xs"
+                onClick={() =>
+                  router.push(
+                    inviteToken
+                      ? `/signup?invite=${encodeURIComponent(inviteToken)}&email=${encodeURIComponent(inviteEmail || email)}`
+                      : "/signup",
+                  )
+                }
+              >
                 Create an account
               </Button>
             </div>

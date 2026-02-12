@@ -63,8 +63,8 @@ export default function SignUpPage() {
       return;
     }
 
-    const me = await fetch("/api/auth/me").then((res) => res.json()).catch(() => null);
-    router.push(getLandingPath(me?.data));
+    router.replace(getLandingPath(payload?.data));
+    router.refresh();
   }
 
   return (
@@ -145,6 +145,22 @@ export default function SignUpPage() {
                 {loading ? "Creating account..." : "Sign up"}
               </Button>
             </form>
+            {inviteToken ? (
+              <div className="rounded-2xl border border-dashed p-4 text-xs text-muted-foreground">
+                Already have an account?
+                <Button
+                  variant="ghost"
+                  className="px-1 text-xs"
+                  onClick={() =>
+                    router.push(
+                      `/signin?invite=${encodeURIComponent(inviteToken)}&email=${encodeURIComponent(inviteEmail || email)}`,
+                    )
+                  }
+                >
+                  Sign in to accept invite
+                </Button>
+              </div>
+            ) : null}
             {existingSession ? (
               <div className="rounded-2xl border border-dashed p-4 text-xs text-muted-foreground">
                 You are already signed in.
@@ -159,7 +175,7 @@ export default function SignUpPage() {
             ) : null}
             <div className="text-xs text-muted-foreground">
               Already have an account?{" "}
-              <Button variant="ghost" className="px-1 text-xs" onClick={() => router.push("/signin")}>
+              <Button variant="ghost" className="px-1 text-xs" onClick={() => router.push("/signin") }>
                 Sign in
               </Button>
             </div>
